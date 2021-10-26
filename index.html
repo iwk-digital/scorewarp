@@ -22,8 +22,6 @@
     //   .then(response => response.json())
     //   .then(json => maps = json);
 
-
-
     document.addEventListener("DOMContentLoaded", (event) => {
       Module.onRuntimeInitialized = async _ => {
         tk = new verovio.toolkit();
@@ -37,16 +35,6 @@
       }
     });
 
-
-
-    // const onsetTimes = [0.423, 1.043, 2.645, 4.932, 5.12, 6.3, 6.9, 15.3, 49.3, 60.1]; // in seconds
-    // const xmlIds = [
-    //   'note-0000001757161680', 'note-0000000575445239',
-    //   'note-0000000240809663', 'note-0000000454467549',
-    //   'note-0000000382909269', 'note-0000000100538923',
-    //   'note-0000001709869562', 'note-0000001176381257',
-    //   'note-0000002030166766', 'note-0000001503426145'
-    // ];
     let noteXs; // x values of notes on screen
     let noteSVGXs; // x values of notes in SVG
     let onsetSVGXs = []; // SVG x values of onset times
@@ -60,16 +48,11 @@
     let tmx; // max
 
     function logKey(e) {
-      // log.textContent += ` ${e.code}`;
-      // let elementId = xmlIds[6];
-      // let el = document.querySelector(`[*|id="${elementId}"]`);
-      // if (e.code == 'KeyR') shiftElement(elementList, el, 50);
-      // if (e.code == 'KeyL') shiftElement(elementList, el, -50);
 
       if (e.code == 'KeyW') {
         let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
-        shiftElement(elementList, null, warpFunc, true);
+        shiftElement(elementList, warpFunc);
 
         drawConnectorLines(false);
       }
@@ -87,7 +70,7 @@
       }
     }
 
-    // draw organe lines, to connect to score (toScore=true) or to performance
+    // draw orange lines, to connect to score (toScore=true) or to performance
     function drawConnectorLines(toScore = true) {
       let pt = document.querySelector('.performanceTime');
       pt.querySelectorAll('line[stroke="orange"]') // remove lines
@@ -262,18 +245,9 @@
       }
     }
 
-    // shift elements horizontally by modifying all x coordinates after element
-    // with delta; if withWarp: delta is the warpFunc for all elements
-    function shiftElement(elementList, el, delta, withWarp = false) {
-      // let el = document.querySelector(`[*|id="${elementId}"]`);
-      // let elX = el.querySelector('use[x]').getAttribute('x');
-      let elX = 0;
-      if (withWarp)
-        console.info('shiftEl with TimeWarp');
-      else {
-        elX = getX(el);
-        console.info('shiftEl ' + delta + '; x: ' + elX + ', el:', el);
-      }
+    // shift elements horizontally by modifying all x coordinates using
+    // the delta warpingFunction
+    function shiftElement(elementList, delta) {
       elementList.forEach(item => {
         // console.info('Shifting ', item);
         if (item.nodeName == 'polygon') { // beam,
@@ -288,15 +262,9 @@
             for (let m = 0; m < n; m++) {
               var mySVGPoint = svgObj.createSVGPoint();
               let x = pointsList.getItem(m).x;
-              if (withWarp) {
-                mySVGPoint.x = x + delta[Math.round(x)];
-                mySVGPoint.y = pointsList.getItem(m).y;
-                pointsList.replaceItem(mySVGPoint, m);
-              } else if (x >= elX) {
-                mySVGPoint.x = x + delta;
-                mySVGPoint.y = pointsList.getItem(m).y;
-                pointsList.replaceItem(mySVGPoint, m);
-              }
+              mySVGPoint.x = x + delta[Math.round(x)];
+              mySVGPoint.y = pointsList.getItem(m).y;
+              pointsList.replaceItem(mySVGPoint, m);
             }
           }
         } else if (item.nodeName == 'path') {
@@ -319,26 +287,19 @@
           // }
           for (let i = 0; i < n; i++) {
             var segment = segments.getItem(i);
-            if (withWarp) {
-              // console.info('Segment ' + segment.pathSegType + ', delta:' + delta[Math.round(segment.x)] + ', ', segment);
-              // if (ledgerLines) { // ledgerLines only have x values
-              //   segment.x += delta[Math.round(xx)];
-              // } else {
-              segment.x += delta[Math.round(segment.x)];
-              if (segment.x1) segment.x1 += delta[Math.round(segment.x1)];
-              if (segment.x2) segment.x2 += delta[Math.round(segment.x2)];
-              // }
-            } else {
-              if (segment.x >= elX) segment.x += delta;
-              if (segment.x1 && segment.x1 >= elX) segment.x1 += delta;
-              if (segment.x2 && segment.x2 >= elX) segment.x2 += delta;
-            }
+            // console.info('Segment ' + segment.pathSegType + ', delta:' + delta[Math.round(segment.x)] + ', ', segment);
+            // if (ledgerLines) { // ledgerLines only have x values
+            //   segment.x += delta[Math.round(xx)];
+            // } else {
+            segment.x += delta[Math.round(segment.x)];
+            if (segment.x1) segment.x1 += delta[Math.round(segment.x1)];
+            if (segment.x2) segment.x2 += delta[Math.round(segment.x2)];
+            // }
           }
         } else if (item.nodeName == 'g') { // note / chord
           let d = 0;
           let x = getX(item);
-          if (withWarp) d = delta[Math.round(x)];
-          else if (x >= elX) d = delta;
+          d = delta[Math.round(x)];
           translate(item, d); // translate in combination with existing translte
           let chord = item.closest('.chord');
           // if within a chord and first note in chord, translate stem/artic too
@@ -356,8 +317,7 @@
               attribute = 'cx';
             let x = parseFloat(item.getAttribute(attribute));
             let d = 0;
-            if (withWarp) d = delta[Math.round(x)];
-            else if (x >= elX) d = delta;
+            d = delta[Math.round(x)];
             item.setAttribute(attribute, x + d);
           }
         }
