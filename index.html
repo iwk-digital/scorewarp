@@ -11,19 +11,42 @@
     //
     //
     // TODO DEBUG: accept user files
-    let fileName = "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
+    let meiFileName = "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
     let svgText;
-    let mapsName = "https://iwk.mdw.ac.at/goebl/svgwarp/eval/Beethoven_Op119_1_maps.json";
-    // let mapsName = "./eval/Beethoven_Op119_1_maps.json";
+    // let mapsFileName = "https://iwk.mdw.ac.at/goebl/svgwarp/eval/Beethoven_Op119_1_maps.json";
+    let mapsFileName = "./eval/Beethoven_Op119_1_maps.json";
+
+    var demoFiles = {
+      "Beethoven Op119 No1": {
+        "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei",
+        "performances": {
+          "119 Pianist 1": "./eval/Beethoven_Op119_1_maps.json",
+          "119 Pianist 2": "./eval/Beethoven_Op119_1_maps.json"
+        }
+      },
+      "Beethoven Op53_1": {
+        "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op53_HenleUrtext/master/Beethoven_Op53_1-HenleUrtext.mei",
+        "performances": {
+          "53 Pianist 1": "",
+          "53 Pianist 2": ""
+        }
+      },
+      "Beethoven Op53_2": {
+        "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op53_HenleUrtext/master/Beethoven_Op53_2-HenleUrtext.mei",
+        "performances": {
+          "P02 Performance A": "./eval/Op53_2_P02-A.boe.mid.maps.json",
+          "P04 Performance A": "./eval/Op53_2_P04-A.boe.mid.maps.json",
+          "P07 Performance A": "./eval/Op53_2_P07-A.boe.mid.maps.json",
+          "P08 Performance A": "./eval/Op53_2_P08-A.boe.mid.maps.json"
+        }
+      }
+    }
+
     let maps;
     let tk;
     let tkVersion = '';
 
     let debugMAX = 170; //323; // DEBUG TODO restrict maps because of bad matches
-
-    fetch(mapsName)
-      .then(response => response.json())
-      .then(json => maps = json);
 
     document.addEventListener("DOMContentLoaded", (event) => {
       Module.onRuntimeInitialized = async _ => {
@@ -32,7 +55,7 @@
         console.log("Verovio " + tkVersion + ' loaded.');
         document.querySelector('#copyright').innerHTML +=
           `Thankfully using <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
-        loadMEI(fileName);
+        loadMEI();
         let log = document.getElementById('log');
         // console.info('log: ', log);
         document.addEventListener('keyup', logKey);
@@ -44,6 +67,7 @@
     let onsetSVGXs = []; // SVG x values of onset times
     let svgWidth;
     let svgViewBox;
+    let pgMarginX;
     let svgObj;
     let elementList; // a nodeList of elements that need to be warped
     let fstX;
@@ -72,7 +96,8 @@
     // draw orange lines, to connect to 'score' or to performed 'notes'
     function drawConnectorLines(target = 'score') { // 'chords', 'notes'
       let pt = document.querySelector('.performanceTime');
-      pt.querySelectorAll('line[stroke="orange"]') // remove lines
+      if (pt)
+        pt.querySelectorAll('line[stroke="orange"]') // remove lines
         .forEach(item => item.remove());
       let j = 0;
       // plot straight lines
@@ -89,8 +114,13 @@
       });
     }
 
+    function clearAllLines() {
+      let pt = document.querySelector('.performanceTime');
+      if (pt) pt.querySelectorAll('line').forEach(item => item.remove());
+    }
+
     function loadMEI() {
-      fetch(fileName)
+      fetch(meiFileName)
         .then((response) => response.text())
         .then((meiXML) => {
           tk.setOptions({
@@ -106,12 +136,6 @@
           console.info('NotationDiv: ', notationDiv);
 
           calculateScoreCoordinates();
-
-          // load timing info.
-          // TODO: put in separate function, once maps loading is settled
-          console.info('maps: ', maps);
-          loadPerformanceTiming(maps);
-          //
 
           // list all warpable elements of score
           elementList = svgObj.querySelector('.page-margin').querySelectorAll(
@@ -134,7 +158,18 @@
       console.info('svgObj viewBox: ', svgViewBox);
       console.info('svgObj transform: ', pageMarginElement.transform);
       console.info('svgObj transform bsVl: ', transformations.getItem(0));
-      let pgMarginX = transformations.getItem(0).matrix.e;
+      pgMarginX = transformations.getItem(0).matrix.e;
+    }
+
+    function loadPerformanceTiming(maps) {
+      // performanceTime Panel to demonstrate
+      let ptObj = createScoreTimeSVG(svgWidth, 200);
+      ptObj.setAttribute('class', 'performanceTime')
+      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
+      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
+      tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
+      // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
+      tmx = maps[debugMAX - 1].obs_mean_onset;
 
       // take first and last noteId to normalize...
       let id1 = maps[getFirstOnsetIdx(maps)].xml_id[0];
@@ -172,17 +207,6 @@
           }
         }
       });
-    }
-
-    function loadPerformanceTiming(maps) {
-      // performanceTime Panel to demonstrate
-      let ptObj = createScoreTimeSVG(svgWidth, 200);
-      ptObj.setAttribute('class', 'performanceTime')
-      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
-      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
-      tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
-      // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
-      tmx = maps[debugMAX - 1].obs_mean_onset;
 
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
@@ -290,9 +314,11 @@
             // if (ledgerLines) { // ledgerLines only have x values
             //   segment.x += delta[Math.round(xx)];
             // } else {
-            segment.x += delta[Math.round(segment.x)];
-            if (segment.x1) segment.x1 += delta[Math.round(segment.x1)];
-            if (segment.x2) segment.x2 += delta[Math.round(segment.x2)];
+            segment.x += delta[Math.round(Math.max(0, segment.x))];
+            if (segment.x1)
+              segment.x1 += delta[Math.round(Math.max(0, segment.x1))];
+            if (segment.x2)
+              segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
             // }
           }
         } else if (item.nodeName == 'g') { // note / chord
@@ -426,6 +452,52 @@
       return node.appendChild(line);
     }
 
+    function updateMeiFile(fileName = "") {
+      meiFileName = fileName;
+      console.info("updateMEIfile " + meiFileName);
+      clearAllLines();
+      loadMEI();
+    }
+
+    function updateMapsFile(fileName = "") {
+      mapsFileName = fileName;
+      console.info("updateMapsFile " + mapsFileName);
+      clearAllLines();
+      fetch(mapsFileName)
+        .then(response => response.json())
+        .then(json => {
+          maps = json;
+          loadPerformanceTiming(maps);
+        });
+      console.info('updateMapsFile maps: ', maps);
+    }
+
+    window.onload = function() {
+      var pieceSel = document.getElementById("piece");
+      var perfSel = document.getElementById("performance");
+      let pieceName;
+      let pieceFile;
+      for (var x in demoFiles) {
+        pieceSel.options[pieceSel.options.length] = new Option(x, x);
+      }
+      pieceSel.onchange = function() {
+        perfSel.length = 1; // to clear existing menu entries
+        pieceName = this.value;
+        pieceFile = demoFiles[this.value].meiFile;
+        console.info('this.value: ' + this.value + ', pieceName: ' + pieceName);
+        for (var y in demoFiles[this.value].performances) {
+          perfSel.options[perfSel.options.length] = new Option(y, y);
+        }
+        updateMeiFile(pieceFile);
+      }
+      perfSel.onchange = function() {
+        let performanceName = this.value;
+        let mapsFile = demoFiles[pieceSel.value].performances[this.value];
+        console.info("Performance: " + performanceName + ', mapsFile:' + mapsFile);
+        updateMapsFile(mapsFile);
+      }
+    }
+    //
   </script>
 </head>
 
@@ -437,12 +509,22 @@
     <button onclick="warpNotes()">Warp notes inside chords [A]</button>
     <button onclick="loadMEI()">Reload data [C]</button>
   </p>
-  <p id="log"></p>
+  <p>
+  <form name="form1" id="form1" action="#">
+    Demo pieces <select name="piece" id="piece">
+      <option value="" selected="selected">Select a piece</option>
+    </select>
+    Demo performances <select name="performance" id="performance">
+      <option value="" selected="selected">Select a performance</option>
+    </select>
+  </form>
+  </p>
   <div id="notation"></div>
   <div id="performanceTime"></div>
   <p id="copyright" style="font-size:xx-small;">
     <a href="https://iwk.mdw.ac.at/goebl/">Werner Goebl</a>, 26 October 2021.
   </p>
+  <p id="log"></p>
 </body>
 
 </html>
