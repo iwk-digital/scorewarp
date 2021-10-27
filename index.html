@@ -8,6 +8,7 @@
   <script>
     //
     //
+    // TODO DEBUG: accept user files
     let fileName = "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
     let svgText;
     let mapsName = "https://iwk.mdw.ac.at/goebl/svgwarp/eval/Beethoven_Op119_1_maps.json";
@@ -52,21 +53,15 @@
       if (e.code == 'KeyW') {
         let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
-        shiftElement(elementList, warpFunc);
+        shiftElements(elementList, warpFunc);
 
-        drawConnectorLines(false);
+        drawConnectorLines('chords');
       }
 
       if (e.code == 'KeyA') {
         adjustIndividualNotes();
+        drawConnectorLines('notes');
       }
-      // if (e.code == "KeyQ") {
-      //   let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
-      //   console.info('Do The SVG Warp AGAIN! minus warpFunc: ', warpFunc);
-      //   shiftElement(elementList, null, -warpFunc, true);
-      //
-      //   drawConnectorLines(true);
-      // }
 
       if (e.code == "KeyC") { // reload MEI file
         loadMEI(fileName);
@@ -74,8 +69,8 @@
 
     }
 
-    // draw orange lines, to connect to score (toScore=true) or to performance
-    function drawConnectorLines(toScore = true) {
+    // draw orange lines, to connect to 'score' or to performed 'notes'
+    function drawConnectorLines(target = 'score') { // 'chords', 'notes'
       let pt = document.querySelector('.performanceTime');
       pt.querySelectorAll('line[stroke="orange"]') // remove lines
         .forEach(item => item.remove());
@@ -86,9 +81,10 @@
           i < debugMAX) { // DEBUGGING
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
-          if (toScore)
+          if (target == 'score')
             addLine(pt, screenX, noteXs[j++], 60, 1, 'orange');
-          else addLine(pt, screenX, screenX, 60, 1, 'orange');
+          else
+            addLine(pt, screenX, screenX, 60, 1, 'orange');
         }
       });
     }
@@ -112,7 +108,7 @@
           calculateScoreCoordinates();
 
           // load timing info.
-          // TODO: put in separate function, once loading is settled
+          // TODO: put in separate function, once maps loading is settled
           console.info('maps: ', maps);
           loadPerformanceTiming(maps);
           //
@@ -182,8 +178,8 @@
       // performanceTime Panel to demonstrate
       let ptObj = createScoreTimeSVG(svgWidth, 200);
       ptObj.setAttribute('class', 'performanceTime')
-      addLine(ptObj, fstX, fstX, 100, 180, 'blue');
-      addLine(ptObj, lstX, lstX, 100, 180, 'blue');
+      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
+      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
       // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
       tmx = maps[debugMAX - 1].obs_mean_onset;
@@ -191,7 +187,7 @@
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
         if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
-          i < debugMAX) { // DEBUGGING
+          i < debugMAX) { // TODO DEBUG DEBUGGING
           // let screenX = (t - tmn) / (tmx - tmn) * svgWidth + fstX;
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
@@ -211,7 +207,7 @@
       let scoreTimeDiv = document.getElementById("performanceTime");
       scoreTimeDiv.innerHTML = serializer.serializeToString(ptObj);
 
-      drawConnectorLines(true);
+      drawConnectorLines('score');
     }
 
     function getFirstOnsetIdx(maps) {
@@ -251,7 +247,7 @@
 
     // shift elements horizontally by modifying all x coordinates using
     // the delta warpingFunction
-    function shiftElement(elementList, delta) {
+    function shiftElements(elementList, delta) {
       elementList.forEach(item => {
         // console.info('Shifting ', item);
         if (item.nodeName == 'polygon') { // beam,
@@ -273,7 +269,6 @@
           }
         } else if (item.nodeName == 'path') {
           // TODO: shift ledgerLines parallel to notes
-          // console.info('ShiftElement Path: ', item);
           let segments = item.pathSegList;
           let n = segments.numberOfItems;
           // console.info(item + ' has ' + n + ' segments: ', segments);
@@ -3567,7 +3562,7 @@
   <p id="log"></p>
   <div id="notation"></div>
   <div id="performanceTime"></div>
-  <p style="font-size:xx-small;">fecit
+  <p style="font-size:xx-small;">
     <a href="https://iwk.mdw.ac.at/goebl/">Werner Goebl</a>, 26 October 2021
   </p>
 </body>
