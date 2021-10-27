@@ -19,7 +19,7 @@
     let tk;
     let tkVersion = '';
 
-    let debugMAX = 170; //168; // DEBUG TODO restrict maps because of bad matches
+    let debugMAX = 170; //323; // DEBUG TODO restrict maps because of bad matches
 
     fetch(mapsName)
       .then(response => response.json())
@@ -31,10 +31,8 @@
         tkVersion = tk.getVersion();
         console.log("Verovio " + tkVersion + ' loaded.');
         document.querySelector('#copyright').innerHTML +=
-        `Thankfully using <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
-
+          `Thankfully using <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
         loadMEI(fileName);
-
         let log = document.getElementById('log');
         // console.info('log: ', log);
         document.addEventListener('keyup', logKey);
@@ -54,24 +52,21 @@
     let tmx; // max
 
     function logKey(e) {
+      if (e.code == 'KeyW') warp(); // warp score to match performed events
+      if (e.code == 'KeyA') warpNotes(); // warp score to match performed notes
+      if (e.code == "KeyC") loadMEI(); // reload MEI file
+    }
 
-      if (e.code == 'KeyW') {
-        let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
-        console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
-        shiftElements(elementList, warpFunc);
+    function warp() {
+      let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
+      console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
+      shiftElements(elementList, warpFunc);
+      drawConnectorLines('chords');
+    }
 
-        drawConnectorLines('chords');
-      }
-
-      if (e.code == 'KeyA') {
-        adjustIndividualNotes();
-        drawConnectorLines('notes');
-      }
-
-      if (e.code == "KeyC") { // reload MEI file
-        loadMEI(fileName);
-      }
-
+    function warpNotes() {
+      adjustIndividualNotes();
+      drawConnectorLines('notes');
     }
 
     // draw orange lines, to connect to 'score' or to performed 'notes'
@@ -94,7 +89,7 @@
       });
     }
 
-    function loadMEI(fileName) {
+    function loadMEI() {
       fetch(fileName)
         .then((response) => response.text())
         .then((meiXML) => {
@@ -431,14 +426,17 @@
       return node.appendChild(line);
     }
 
-    // DEBUG: hard-wired maps data. TODO: load maps through GUI...
-
   </script>
 </head>
 
 <body>
   <h1>Let&rsquo;s do the SVG Warp again!</h1>
-  <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p>
+  <!-- <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p> -->
+  <p>
+    <button onclick="warp()">Warp [W]</button>
+    <button onclick="warpNotes()">Warp notes inside chords [A]</button>
+    <button onclick="loadMEI()">Reload data [C]</button>
+  </p>
   <p id="log"></p>
   <div id="notation"></div>
   <div id="performanceTime"></div>
