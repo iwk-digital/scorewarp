@@ -74,6 +74,9 @@
     let lstX;
     let tmn; // min performance time
     let tmx; // max
+    let warped = false;
+    var pieceSel;
+    var perfSel;
 
     function logKey(e) {
       if (e.code == 'KeyW') warp(); // warp score to match performed events
@@ -82,15 +85,20 @@
     }
 
     function warp() {
-      let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
-      console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
-      shiftElements(elementList, warpFunc);
-      drawConnectorLines('chords');
+      if (!warped) {
+        let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
+        console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
+        shiftElements(elementList, warpFunc);
+        drawConnectorLines('chords');
+        warped = true;
+      }
     }
 
     function warpNotes() {
-      adjustIndividualNotes();
-      drawConnectorLines('notes');
+      if (warped) {
+        adjustIndividualNotes();
+        drawConnectorLines('notes');
+      }
     }
 
     // draw orange lines, to connect to 'score' or to performed 'notes'
@@ -120,6 +128,8 @@
     }
 
     function loadMEI() {
+      warped = false;
+      clearAllLines();
       fetch(meiFileName)
         .then((response) => response.text())
         .then((meiXML) => {
@@ -142,8 +152,10 @@
             'g.note, :not(g.notehead)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
           // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon, ellipse, circle, path');
           console.info('elementList: ', elementList);
-
         });
+      if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
+        demoFiles[pieceSel.value].performances[perfSel.value])
+        updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
     }
 
     function calculateScoreCoordinates() {
@@ -163,10 +175,9 @@
 
     function loadPerformanceTiming(maps) {
       // performanceTime Panel to demonstrate
-      let ptObj = createScoreTimeSVG(svgWidth, 200);
+      let ptObj = document.querySelector('.performanceTime');
+      if (!ptObj) ptObj = createScoreTimeSVG(svgWidth, 200);
       ptObj.setAttribute('class', 'performanceTime')
-      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
-      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
       // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
       tmx = maps[debugMAX - 1].obs_mean_onset;
@@ -185,6 +196,9 @@
       lstX = parseFloat(el2.getAttribute('x'));
       lstX = (pgMarginX + lstX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
       console.info('lastNotehead x: ', lstX);
+
+      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
+      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
 
       // calculate score note coordinates
       noteXs = [];
@@ -208,6 +222,7 @@
         }
       });
 
+      onsetSVGx = [];
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
         if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
@@ -463,6 +478,7 @@
       mapsFileName = fileName;
       console.info("updateMapsFile " + mapsFileName);
       clearAllLines();
+      if (warped) loadMEI();
       fetch(mapsFileName)
         .then(response => response.json())
         .then(json => {
@@ -473,8 +489,8 @@
     }
 
     window.onload = function() {
-      var pieceSel = document.getElementById("piece");
-      var perfSel = document.getElementById("performance");
+      pieceSel = document.getElementById("piece");
+      perfSel = document.getElementById("performance");
       let pieceName;
       let pieceFile;
       for (var x in demoFiles) {
