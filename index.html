@@ -314,11 +314,10 @@
             }
           }
         } else if (item.nodeName == 'path') {
-          // TODO: shift ledgerLines parallel to notes
           let segments = item.pathSegList;
           let n = segments.numberOfItems;
           let ledgerLines = item.closest('.ledgerLines');
-          if (ledgerLines && n == 2) { // take first x to translate ledgerLines
+          if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
             let x = Math.round((segments[0].x * 7 + segments[1].x) / 8);
             translate(item, delta[x]);
           } else {
@@ -519,11 +518,6 @@
   <h1>Let&rsquo;s do the SVG Warp again!</h1>
   <!-- <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p> -->
   <p>
-    <button onclick="warp()">1) Warp [W]</button>
-    <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
-    <button onclick="loadMEI()">3) Reload data [C]</button>
-  </p>
-  <p>
   <form name="form1" id="form1" action="#">
     Demo pieces <select name="piece" id="piece">
       <option value="" selected="selected">Select a piece</option>
@@ -531,6 +525,10 @@
     Demo performances <select name="performance" id="performance">
       <option value="" selected="selected">Select a performance</option>
     </select>
+    <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
+    <button onclick="warp()">1) Warp [W]</button>
+    <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
+    <button onclick="loadMEI()">3) Reload data [C]</button>
   </form>
   </p>
   <div id="notation"></div>
