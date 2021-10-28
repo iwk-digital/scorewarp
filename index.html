@@ -194,7 +194,7 @@
       fstX = (pgMarginX + fstX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
       console.info('firstNotehead x: ', fstX);
       // let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
-      let id2 = maps[Math.min(debugMAX - 1,getLastOnsetIdx(maps))].xml_id[0]; // DEBUG TODO remove this hard-wired trash
+      let id2 = maps[Math.min(debugMAX - 1, getLastOnsetIdx(maps))].xml_id[0]; // DEBUG TODO remove this hard-wired trash
       let el2 = document.querySelector(`[*|id="${id2}"] use[x]`);
       console.info('el2: ', el2);
       lstX = parseFloat(el2.getAttribute('x'));
@@ -317,31 +317,20 @@
           // TODO: shift ledgerLines parallel to notes
           let segments = item.pathSegList;
           let n = segments.numberOfItems;
-          // console.info(item + ' has ' + n + ' segments: ', segments);
-          // let xx = 0;
-          // let ledgerLines = item.closest('.ledgerLines');
-          // if (ledgerLines && n == 2) { // take mean x for ledgerLines
-          //   console.info('ledgerLines: ', ledgerLines);
-          //   xx = (5 * segments[0].x + segments[1].x) / 6;
-          //   for (let i = 0; i < n; i++) {
-          //     console.info('seg.x:' + segments[i].x);
-          //     // xx += segments[i].x;
-          //   }
-          //   // xx /= n;
-          //   console.info('avg.x: ' + xx);
-          // }
-          for (let i = 0; i < n; i++) {
-            var segment = segments.getItem(i);
-            // console.info('Segment ' + segment.pathSegType + ', delta:' + delta[Math.round(segment.x)] + ', ', segment);
-            // if (ledgerLines) { // ledgerLines only have x values
-            //   segment.x += delta[Math.round(xx)];
-            // } else {
-            segment.x += delta[Math.round(Math.max(0, segment.x))];
-            if (segment.x1)
-              segment.x1 += delta[Math.round(Math.max(0, segment.x1))];
-            if (segment.x2)
-              segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
-            // }
+          let ledgerLines = item.closest('.ledgerLines');
+          if (ledgerLines && n == 2) { // take first x to translate ledgerLines
+            let x = Math.round((segments[0].x * 7 + segments[1].x) / 8);
+            translate(item, delta[x]);
+          } else {
+            for (let i = 0; i < n; i++) {
+              var segment = segments.getItem(i);
+              segment.x += delta[Math.round(Math.max(0, segment.x))];
+              if (segment.x1)
+                segment.x1 += delta[Math.round(Math.max(0, segment.x1))];
+              if (segment.x2)
+                segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
+              // }
+            }
           }
         } else if (item.nodeName == 'g') { // note / chord
           let d = 0;
