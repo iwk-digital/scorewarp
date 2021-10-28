@@ -428,20 +428,40 @@
       }
     }
 
-    function shiftBeam(beam, item, delta) {
-      let stems = beam.querySelectorAll('.notehead>use');
-      x1 = stems[0].getAttribute('x');
-      x2 = stems[stems.length - 1].getAttribute('x');
-      // + stems[stems.length - 1].getAttribute('width');
-      for (let m = 0; m < item.points.numberOfItems; m++) {
+    function shiftBeam(beam, polygon, delta) {
+      let stems = beam.querySelectorAll('.stem');
+      let px1 = polygon.points[0].x;
+      let px2 = polygon.points[1].x;
+      let x1;
+      let diff1 = Number.MAX_VALUE;
+      let x2;
+      let diff2 = Number.MAX_VALUE;
+      console.info('beam: ', beam);
+      console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
+      stems.forEach((item) => {
+        let d1 = Math.abs(item.getAttribute('x') - px1);
+        let d2 = Math.abs(item.getAttribute('x') - px2);
+        let note = item.closest('.note');
+        if (!note) note = item.closest('.chord');
+        let x = note.querySelector('.notehead>use').getAttribute('x');
+        if (d1 < d2 && d1 < diff1) {
+          x1 = x;
+          diff1 = d1;
+        } else if (d2 <= diff2) {
+          x2 = x;
+          diff2 = d2;
+        }
+      });
+      console.info('x1/x2: ' + x1 + '/' + x2);
+      for (let m = 0; m < polygon.points.numberOfItems; m++) {
         var mySVGPoint = svgObj.createSVGPoint();
-        let x = item.points.getItem(m).x;
+        let x = polygon.points.getItem(m).x;
         if (m == 0 || m == 3)
           mySVGPoint.x = x + delta[Math.round(x1)];
         else
           mySVGPoint.x = x + delta[Math.round(x2)];
-        mySVGPoint.y = item.points.getItem(m).y;
-        item.points.replaceItem(mySVGPoint, m);
+        mySVGPoint.y = polygon.points.getItem(m).y;
+        polygon.points.replaceItem(mySVGPoint, m);
       }
     }
 
@@ -519,18 +539,17 @@
   <!-- <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p> -->
   <p>
   <form name="form1" id="form1" action="#">
-    Demo pieces <select name="piece" id="piece">
+    Demo pieces/performances <select name="piece" id="piece">
       <option value="" selected="selected">Select a piece</option>
     </select>
-    Demo performances <select name="performance" id="performance">
+    <select name="performance" id="performance">
       <option value="" selected="selected">Select a performance</option>
     </select>
     <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
-    <button onclick="warp()">1) Warp [W]</button>
-    <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
-    <button onclick="loadMEI()">3) Reload data [C]</button>
   </form>
-  </p>
+  <button onclick="warp()">1) Warp [W]</button>
+  <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
+  <button onclick="loadMEI()">3) Reload data [C]</button>  </p>
   <div id="notation"></div>
   <div id="performanceTime"></div>
   <p id="copyright" style="font-size:xx-small;">
