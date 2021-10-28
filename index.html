@@ -46,7 +46,7 @@
     let tk;
     let tkVersion = '';
 
-    let debugMAX = 170; //323; // DEBUG TODO restrict maps because of bad matches
+    let debugMAX = 99999170; //323; // DEBUG TODO restrict maps because of bad matches
 
     document.addEventListener("DOMContentLoaded", (event) => {
       Module.onRuntimeInitialized = async _ => {
@@ -110,7 +110,7 @@
       let j = 0;
       // plot straight lines
       maps.forEach((item, i) => {
-        if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
+        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
@@ -128,6 +128,7 @@
     }
 
     function loadMEI() {
+      document.getElementById("performanceTime").innerHTML = "";
       warped = false;
       clearAllLines();
       fetch(meiFileName)
@@ -142,7 +143,8 @@
           svgText = tk.renderData(meiXML, {});
           // console.info('Notation SVG: ', svg);
           let notationDiv = document.getElementById("notation");
-          notationDiv.innerHTML = svgText;
+          notationDiv.innerHTML = "<p><b>" + pieceSel.value + "</b></p>";
+          notationDiv.innerHTML += svgText;
           console.info('NotationDiv: ', notationDiv);
 
           calculateScoreCoordinates();
@@ -150,12 +152,15 @@
           // list all warpable elements of score
           elementList = svgObj.querySelector('.page-margin').querySelectorAll(
             'g.note, :not(g.notehead)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
-          // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon, ellipse, circle, path');
+          // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
+          // ellipse, circle, path');
           console.info('elementList: ', elementList);
         });
       if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
-        demoFiles[pieceSel.value].performances[perfSel.value])
+        demoFiles[pieceSel.value].performances[perfSel.value]) {
         updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
+      }
+
     }
 
     function calculateScoreCoordinates() {
@@ -175,12 +180,11 @@
 
     function loadPerformanceTiming(maps) {
       // performanceTime Panel to demonstrate
-      let ptObj = document.querySelector('.performanceTime');
-      if (!ptObj) ptObj = createScoreTimeSVG(svgWidth, 200);
+      let ptObj = createScoreTimeSVG(svgWidth, 200);
       ptObj.setAttribute('class', 'performanceTime')
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
       // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
-      tmx = maps[debugMAX - 1].obs_mean_onset;
+      tmx = maps[Math.min(getLastOnsetIdx(maps), debugMAX - 1)].obs_mean_onset;
 
       // take first and last noteId to normalize...
       let id1 = maps[getFirstOnsetIdx(maps)].xml_id[0];
@@ -190,7 +194,7 @@
       fstX = (pgMarginX + fstX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
       console.info('firstNotehead x: ', fstX);
       // let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
-      let id2 = maps[debugMAX - 1].xml_id[0]; // DEBUG TODO remove this hard-wired trash
+      let id2 = maps[Math.min(debugMAX - 1,getLastOnsetIdx(maps))].xml_id[0]; // DEBUG TODO remove this hard-wired trash
       let el2 = document.querySelector(`[*|id="${id2}"] use[x]`);
       console.info('el2: ', el2);
       lstX = parseFloat(el2.getAttribute('x'));
@@ -204,7 +208,7 @@
       noteXs = [];
       noteSVGXs = [];
       maps.forEach((item, i) => {
-        if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
+        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING!!!
           let note = document.querySelector('[*|id="' + item.xml_id[0] + '"]');
           if (note) {
@@ -225,7 +229,7 @@
       onsetSVGx = [];
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
-        if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
+        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
           i < debugMAX) { // TODO DEBUG DEBUGGING
           // let screenX = (t - tmn) / (tmx - tmn) * svgWidth + fstX;
           let t = item.obs_mean_onset;
@@ -244,9 +248,12 @@
       const serializer = new XMLSerializer();
       // console.info('stSVG: ' + stSVG);
       let scoreTimeDiv = document.getElementById("performanceTime");
-      scoreTimeDiv.innerHTML = serializer.serializeToString(ptObj);
+      if (pieceSel && pieceSel.value && perfSel && perfSel.value)
+        scoreTimeDiv.innerHTML = "<p><b>" + perfSel.value + "</b></p>";
+      scoreTimeDiv.innerHTML += serializer.serializeToString(ptObj);
 
       drawConnectorLines('score');
+
     }
 
     function getFirstOnsetIdx(maps) {
@@ -366,7 +373,7 @@
 
     function adjustIndividualNotes() {
       maps.forEach((item, i) => {
-        if (item.obs_mean_onset >= 0 && !item.xml_id[0].includes('trompa') &&
+        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING
           let onsetSVGx = (item.obs_mean_onset - tmn) / (tmx - tmn) *
             (noteSVGXs[noteSVGXs.length - 1] - noteSVGXs[0]) + noteSVGXs[0];
