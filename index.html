@@ -59,6 +59,7 @@
     // DEBUG TODO restrict maps because of bad matches
 
     document.addEventListener("DOMContentLoaded", (event) => {
+      document.getElementById("notation").innerHTML = "<b>Loading Verovio.</b>";
       Module.onRuntimeInitialized = async _ => {
         tk = new verovio.toolkit();
         tkVersion = tk.getVersion();
@@ -96,6 +97,7 @@
     }
 
     function warp() {
+      if (!noteSVGXs) return;
       if (!warped) {
         let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
@@ -103,6 +105,7 @@
         drawConnectorLines('chords');
         drawTimeAxis(svgObj, true, svgHeight - 20, 'cornflowerblue');
         warped = true;
+        createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
       }
     }
 
@@ -157,7 +160,9 @@
     function loadMEI() {
       warped = false;
       clearAllLines();
+      document.getElementById("downloadLink").innerHTML = "";
       document.getElementById("performanceTime").innerHTML = "";
+      document.getElementById("notation").innerHTML = "<b>Loading MEI.</b>";
       fetch(meiFileName)
         .then((response) => response.text())
         .then((meiXML) => {
@@ -182,12 +187,13 @@
           // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
           // ellipse, circle, path');
           console.info('elementList: ', elementList);
-        });
-      if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
-        demoFiles[pieceSel.value].performances[perfSel.value]) {
-        updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
-      }
 
+          if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
+            demoFiles[pieceSel.value].performances[perfSel.value]) {
+            updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
+          }
+          createSVGDownloadLink(svgText);
+        });
     }
 
     function calculateScoreCoordinates() {
@@ -208,6 +214,7 @@
 
     function loadPerformanceTiming(maps) {
       // performanceTime Panel to demonstrate
+      document.getElementById("downloadLink").innerHTML = "";
       let ptObj = createScoreTimeSVG(svgWidth, 200);
       ptObj.setAttribute('class', 'performanceTime')
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
@@ -277,6 +284,7 @@
 
       drawConnectorLines('score');
       drawTimeAxis(document.querySelector('.performanceTime'));
+      createSVGDownloadLink(serializer.serializeToString(svgObj));
       // drawPerformanceLinesInSvg();
     }
 
@@ -609,11 +617,30 @@
         updateMapsFile(mapsFile);
       }
     }
+
+    function createSVGDownloadLink(svg) {
+      let type = "image/svg+xml";
+      let a = document.getElementById("downloadLink");
+      var file = new Blob([svg], {
+        type: type
+      });
+      a.href = URL.createObjectURL(file);
+      let svgName = "";
+      if (!warped && pieceSel && pieceSel.value) {
+        svgName = pieceSel.value;
+        a.innerHTML = "Download SVG";
+      }
+      if (warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
+        svgName = pieceSel.value + '_' + perfSel.value;
+        a.innerHTML = "Download Warped SVG";
+      }
+      a.download = svgName;
+    }
     //
   </script>
 </head>
 
-<body>
+<body style="font-family:Arial, Helvetica, sans-serif">
   <h1>Let&rsquo;s do the SVG Warp again!</h1>
   <!-- <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p> -->
   <p>
@@ -628,9 +655,12 @@
   </form>
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
-  <button onclick="loadMEI()">3) Reload data [C]</button> </p>
+  <button onclick="loadMEI()">3) Reload data [C]</button>
+  <!-- <button onclick="createSVGDownloadLink()">4) Save SVG [S]</button> -->
+  <a href id="downloadLink"></a>
+  </p>
   <div id="notation">
-    <p><b>Loading Verovio...</b></p>
+    <p><b>Please load an MEI score file.</b></p>
   </div>
   <div id="performanceTime"></div>
   <p id="copyright" style="font-size:xx-small;">
