@@ -429,30 +429,33 @@
     }
 
     function shiftBeam(beam, polygon, delta) {
-      let stems = beam.querySelectorAll('.stem');
+      let stems = beam.querySelectorAll('.stem > rect');
       let px1 = polygon.points[0].x;
       let px2 = polygon.points[1].x;
-      let x1;
-      let diff1 = Number.MAX_VALUE;
-      let x2;
-      let diff2 = Number.MAX_VALUE;
-      console.info('beam: ', beam);
-      console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
+      // console.info('beam: ', beam);
+      // console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
+      let diffs1 = [];
+      let diffs2 = [];
       stems.forEach((item) => {
-        let d1 = Math.abs(item.getAttribute('x') - px1);
-        let d2 = Math.abs(item.getAttribute('x') - px2);
-        let note = item.closest('.note');
-        if (!note) note = item.closest('.chord');
-        let x = note.querySelector('.notehead>use').getAttribute('x');
-        if (d1 < d2 && d1 < diff1) {
-          x1 = x;
-          diff1 = d1;
-        } else if (d2 <= diff2) {
-          x2 = x;
-          diff2 = d2;
-        }
+        diffs1.push(Math.abs(item.getAttribute('x') - px1));
+        diffs2.push(Math.abs(item.getAttribute('x') - px2));
       });
-      console.info('x1/x2: ' + x1 + '/' + x2);
+      // console.info('diffs: ', diffs1, diffs2);
+      let i1 = indexOfMin(diffs1);
+      let i2 = indexOfMin(diffs2);
+      if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
+        if (diffs1(i1) <= diff2(i2))
+          i2 = indexOfMin(diffs2, i2);
+        else
+          i1 = indexOfMin(diffs1, i1);
+      }
+      let n1 = stems[i1].closest('.note');
+      if (!n1) n1 = stems[i1].closest('.chord');
+      x1 = n1.querySelector('.notehead>use').getAttribute('x');
+      let n2 = stems[i2].closest('.note');
+      if (!n2) n2 = stems[i2].closest('.chord');
+      x2 = n2.querySelector('.notehead>use').getAttribute('x');
+
       for (let m = 0; m < polygon.points.numberOfItems; m++) {
         var mySVGPoint = svgObj.createSVGPoint();
         let x = polygon.points.getItem(m).x;
@@ -482,6 +485,14 @@
       line.setAttribute('stroke-width', 1);
       line.setAttribute('stroke', color);
       return node.appendChild(line);
+    }
+
+    function indexOfMin(a, notThis = -1) {
+      let lowest = 0;
+      a.forEach((item, i) => {
+        if (item < a[lowest] && i != notThis) lowest = i;
+      });
+      return lowest;
     }
 
     function updateMeiFile(fileName = "") {
@@ -549,7 +560,7 @@
   </form>
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
-  <button onclick="loadMEI()">3) Reload data [C]</button>  </p>
+  <button onclick="loadMEI()">3) Reload data [C]</button> </p>
   <div id="notation"></div>
   <div id="performanceTime"></div>
   <p id="copyright" style="font-size:xx-small;">
