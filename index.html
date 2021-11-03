@@ -50,11 +50,13 @@
       }
     }
 
+    const svgNS = "http://www.w3.org/2000/svg";
     let maps;
     let tk;
     let tkVersion = '';
 
-    let debugMAX = 99999170; //323; // DEBUG TODO restrict maps because of bad matches
+    let debugMAX = Number.MAX_VALUE; //323;
+    // DEBUG TODO restrict maps because of bad matches
 
     document.addEventListener("DOMContentLoaded", (event) => {
       Module.onRuntimeInitialized = async _ => {
@@ -74,6 +76,7 @@
     let noteSVGXs; // x values of notes in SVG
     let onsetSVGXs = []; // SVG x values of onset times
     let svgWidth;
+    let svgHeight;
     let svgViewBox;
     let pgMarginX;
     let svgObj;
@@ -98,6 +101,7 @@
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
         shiftElements(elementList, warpFunc);
         drawConnectorLines('chords');
+        drawTimeAxis(svgObj, true, svgHeight - 20, 'cornflowerblue');
         warped = true;
       }
     }
@@ -109,6 +113,10 @@
       }
     }
 
+    let y0basis = 180; // y of time axis
+    let y1 = 80; // y of straigth lines
+    let y2 = 0; // y of orange connector lines
+
     // draw orange lines, to connect to 'score' or to performed 'notes'
     function drawConnectorLines(target = 'score') { // 'chords', 'notes'
       let pt = document.querySelector('.performanceTime');
@@ -118,27 +126,38 @@
       let j = 0;
       // plot straight lines
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
           if (target == 'score')
-            addLine(pt, screenX, noteXs[j++], 60, 1, 'orange');
+            addLine(pt, screenX, noteXs[j++], y1, y2, 'orange');
           else
-            addLine(pt, screenX, screenX, 60, 1, 'orange');
+            addLine(pt, screenX, screenX, y1, y2, 'orange');
         }
+      });
+    }
+
+    // draws orange lines inside SVG (for debugging)
+    function drawPerformanceLinesInSvg() {
+      let pageMarginElement = document.querySelector('.page-margin');
+      onsetSVGXs.forEach(item => {
+        addLine(pageMarginElement, item, item, svgViewBox[3], 0, 'red', 20);
       });
     }
 
     function clearAllLines() {
       let pt = document.querySelector('.performanceTime');
       if (pt) pt.querySelectorAll('line').forEach(item => item.remove());
+      let pm = document.querySelector('.page-margin');
+      console.info('clearAllLines pm: ', pm);
+      if (pm) pm.querySelectorAll('line').forEach(item => item.remove());
     }
 
     function loadMEI() {
-      document.getElementById("performanceTime").innerHTML = "";
       warped = false;
       clearAllLines();
+      document.getElementById("performanceTime").innerHTML = "";
       fetch(meiFileName)
         .then((response) => response.text())
         .then((meiXML) => {
@@ -174,6 +193,7 @@
     function calculateScoreCoordinates() {
       svgObj = document.querySelector('svg');
       svgWidth = parseFloat(svgObj.getAttribute('width'));
+      svgHeight = parseFloat(svgObj.getAttribute('height'));
       svgViewBox = svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
       svgViewBox = svgViewBox.split(' ').map(Number);
       let pageMarginElement = svgObj.querySelector('.page-margin');
@@ -198,25 +218,23 @@
       let id1 = maps[getFirstOnsetIdx(maps)].xml_id[0];
       let el1 = document.querySelector(`[*|id="${id1}"] use[x]`);
       console.info('el1: ', el1);
-      fstX = parseFloat(el1.getAttribute('x'));
-      fstX = (pgMarginX + fstX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
+      fstX = svg2screen(parseFloat(el1.getAttribute('x')));
       console.info('firstNotehead x: ', fstX);
       // let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
       let id2 = maps[Math.min(debugMAX - 1, getLastOnsetIdx(maps))].xml_id[0]; // DEBUG TODO remove this hard-wired trash
       let el2 = document.querySelector(`[*|id="${id2}"] use[x]`);
       console.info('el2: ', el2);
-      lstX = parseFloat(el2.getAttribute('x'));
-      lstX = (pgMarginX + lstX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
+      lstX = svg2screen(parseFloat(el2.getAttribute('x')));
       console.info('lastNotehead x: ', lstX);
 
-      addLine(ptObj, fstX, fstX, 100, 180, 'blue'); // first line
-      addLine(ptObj, lstX, lstX, 100, 180, 'blue'); // last line
+      addLine(ptObj, fstX, fstX, y0basis, 200, 'blue'); // first line
+      addLine(ptObj, lstX, lstX, y0basis, 200, 'blue'); // last line
 
       // calculate score note coordinates
       noteXs = [];
       noteSVGXs = [];
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING!!!
           let note = document.querySelector('[*|id="' + item.xml_id[0] + '"]');
           if (note) {
@@ -224,30 +242,27 @@
             let noteX = parseFloat(use.getAttribute('x'));
             // console.info(i + '; noteSVGX: ', noteX + ', note: ', note);
             noteSVGXs.push(noteX); // pure SVG x values (without page-margin)
-            noteX = (noteX + pgMarginX) * svgWidth /
-              (svgViewBox[2] - svgViewBox[0]);
-            // console.info('noteX: ', noteX);
-            noteXs.push(noteX);
+            noteXs.push(svg2screen(noteX));
           } else {
             console.info(i + '; note: NOT FOUND');
           }
         }
       });
 
-      onsetSVGx = [];
+      onsetSVGXs = [];
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
           i < debugMAX) { // TODO DEBUG DEBUGGING
           // let screenX = (t - tmn) / (tmx - tmn) * svgWidth + fstX;
           let t = item.obs_mean_onset;
-          let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
-          addLine(ptObj, screenX, screenX, 60, 130, 'purple');
+          let screenX = time2screen(t);
+          addLine(ptObj, screenX, screenX, 80, 180, 'purple');
           // save onset time data in SVG coordinates
-          onsetSVGXs.push((t - tmn) / (tmx - tmn) *
-            (noteSVGXs[noteSVGXs.length - 1] - noteSVGXs[0]) + noteSVGXs[0]);
+          onsetSVGXs.push(time2svg(t));
         }
       });
+      console.info('loadPerformanceTiming: timing mn/mx ' + tmn + '/' + tmx);
       console.info('loadPerformanceTiming: onsetSVGXs', onsetSVGXs);
       console.info('loadPerformanceTiming: noteSVGXs', noteSVGXs);
       console.info('loadPerformanceTiming: noteXs', noteXs);
@@ -256,12 +271,13 @@
       const serializer = new XMLSerializer();
       // console.info('stSVG: ' + stSVG);
       let scoreTimeDiv = document.getElementById("performanceTime");
+      scoreTimeDiv.innerHTML = serializer.serializeToString(ptObj);
       if (pieceSel && pieceSel.value && perfSel && perfSel.value)
-        scoreTimeDiv.innerHTML = "<p><b>" + perfSel.value + "</b></p>";
-      scoreTimeDiv.innerHTML += serializer.serializeToString(ptObj);
+        scoreTimeDiv.innerHTML += "<p><b>" + perfSel.value + "</b></p>";
 
       drawConnectorLines('score');
-
+      drawTimeAxis(document.querySelector('.performanceTime'));
+      // drawPerformanceLinesInSvg();
     }
 
     function getFirstOnsetIdx(maps) {
@@ -371,10 +387,9 @@
 
     function adjustIndividualNotes() {
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i < getLastOnsetIdx(maps) &&
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
           i < debugMAX) { // DEBUGGING
-          let onsetSVGx = (item.obs_mean_onset - tmn) / (tmx - tmn) *
-            (noteSVGXs[noteSVGXs.length - 1] - noteSVGXs[0]) + noteSVGXs[0];
+          let onsetSVGx = time2svg(item.obs_mean_onset);
           item.xml_id.forEach(item => {
             let note = svgObj.querySelector(`[*|id="${item}"]`);
             let use = note.querySelector('g.notehead use');
@@ -478,21 +493,66 @@
 
     // Create SVG for score time plotting
     function createScoreTimeSVG(width, height, ) {
-      const stSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const stSVG = document.createElementNS(svgNS, 'svg');
       stSVG.setAttribute('width', width);
       stSVG.setAttribute('height', height);
       return stSVG;
     }
 
-    function addLine(node, x1, x2, y1, y2, color = "black") {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    function addLine(node, x1, x2, y1, y2, color = "black", strokeWidth = 1) {
+      const line = document.createElementNS(svgNS, 'line');
       line.setAttribute('x1', x1);
       line.setAttribute('x2', x2);
       line.setAttribute('y1', y1);
       line.setAttribute('y2', y2);
-      line.setAttribute('stroke-width', 1);
+      line.setAttribute('stroke-width', strokeWidth);
+      line.setAttribute('stroke-linecap', 'round');
       line.setAttribute('stroke', color);
       return node.appendChild(line);
+    }
+
+    function addText(node, text, x, y, halign = "middle", color = "black") {
+      let txt = document.createElementNS(svgNS, 'text');
+      txt.setAttribute('text-anchor', halign);
+      txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      txt.setAttribute('font-size', 10.5);
+      txt.setAttribute('fill', color);
+      txt.setAttribute('x', x);
+      txt.setAttribute('y', y);
+      txt.appendChild(document.createTextNode(text));
+      return node.appendChild(txt);
+    }
+
+    function drawTimeAxis(node, toScreen = true, y = y0basis, color = "black") {
+      let incr = 10; // seconds
+      let lastTick = Math.ceil(tmx / incr) * incr;
+      let s, s2;
+      for (let t = 0; t <= lastTick; t += incr) {
+        (toScreen) ? s = time2screen(t): s = time2svg(t);
+        addLine(node, s, s, y, y + 2, color, 1);
+        addText(node, t, s, y + 12, 'middle', color);
+        if (t == 0) {
+          (toScreen) ? s2 = time2screen(lastTick): time2svg(lastTick);
+          addLine(node, s, s2, y, y, color, 1);
+          addText(node, 'Time (s)', 1, y - 2, "left", color);
+        }
+      }
+    }
+
+    // convert time in seconds to screen coordinate x values
+    function time2screen(t) {
+      return (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
+    }
+
+    // convert time in seconds to svg x coordinates inside pageMargin
+    function time2svg(t) {
+      return (t - tmn) / (tmx - tmn) *
+        (noteSVGXs[noteSVGXs.length - 1] - noteSVGXs[0]) + noteSVGXs[0];
+    }
+
+    // convert svg x coordinates inside pageMargin to screen coordinates
+    function svg2screen(x, pageMarginX) {
+      return (x + pgMarginX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
     }
 
     function indexOfMin(a, notThis = -1) {
@@ -569,7 +629,9 @@
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
   <button onclick="loadMEI()">3) Reload data [C]</button> </p>
-  <div id="notation"></div>
+  <div id="notation">
+    <p><b>Loading Verovio...</b></p>
+  </div>
   <div id="performanceTime"></div>
   <p id="copyright" style="font-size:xx-small;">
     <a href="https://iwk.mdw.ac.at/goebl/">Werner Goebl</a>, 26 October 2021.
