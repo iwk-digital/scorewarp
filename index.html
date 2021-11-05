@@ -43,10 +43,6 @@
       "Beethoven Op31_No2_2": {
         "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No2_HenleUrtext/master/Beethoven_Op31_No2_2-HenleUrtext.mei",
         "performances": {
-          //  "Op31-No2_2 D1": "./eval/D1-Beethoven-Op31-2-2.boe_corresp.txt.maps.json",
-          // "Op31-No2_2 D2": "./eval/D2-Beethoven-Op31-2-2.boe_corresp.txt.maps.json",
-          // "Op31-No2_2 D3": "./eval/D3-Beethoven-Op31-2-2.boe_corresp.txt.maps.json",
-          // "Op31-No2_2 D4": "./eval/D4-Beethoven-Op31-2-2.boe_corresp.txt.maps.json"
           "Op31-No2_2 D1": "./eval/REC041_12-19_1133.boe.mid.maps.expansion-default.json",
           "Op31-No2_2 D2": "./eval/REC042_12-19_1153.boe.mid.maps.expansion-default.json",
           "Op31-No2_2 D3": "./eval/REC043_12-19_1202.boe.mid.maps.expansion-default.json",
@@ -108,23 +104,28 @@
       if (e.code == 'KeyW') warp(); // warp score to match performed events
       if (e.code == 'KeyA') warpNotes(); // warp score to match performed notes
       if (e.code == "KeyC") loadMEI(); // reload MEI file
+      if (e.code == "KeyD" && svgObj) { // create SVG download link
+        createSVGDownloadLink();
+      }
     }
 
     function warp() {
       if (!noteSVGXs) return;
       if (!warped) {
+        document.getElementById("downloadLink").innerHTML = "";
         let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
         shiftElements(elementList, warpFunc);
         drawConnectorLines('chords');
         drawTimeAxis(svgObj, true, svgHeight - 20, 'cornflowerblue');
         warped = true;
-        createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
+        // createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
       }
     }
 
     function warpNotes() {
       if (warped) {
+        document.getElementById("downloadLink").innerHTML = "";
         adjustIndividualNotes();
         drawConnectorLines('notes');
       }
@@ -215,7 +216,7 @@
         demoFiles[pieceSel.value].performances[perfSel.value]) {
         updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
       }
-      createSVGDownloadLink(svgText);
+      // createSVGDownloadLink(svgText);
     }
 
     function calculateScoreCoordinates() {
@@ -306,7 +307,7 @@
 
       drawConnectorLines('score');
       drawTimeAxis(document.querySelector('.performanceTime'));
-      createSVGDownloadLink(serializer.serializeToString(svgObj));
+      // createSVGDownloadLink(serializer.serializeToString(svgObj));
       // drawPerformanceLinesInSvg();
     }
 
@@ -640,23 +641,27 @@
       }
     }
 
-    function createSVGDownloadLink(svg) {
-      let type = "image/svg+xml";
-      let a = document.getElementById("downloadLink");
-      var file = new Blob([svg], {
-        type: type
-      });
-      a.href = URL.createObjectURL(file);
-      let svgName = "";
-      if (!warped && pieceSel && pieceSel.value) {
-        svgName = pieceSel.value;
-        a.innerHTML = "Download SVG";
+    // creates a downloadable file with svg as text, and a download link
+    function createSVGDownloadLink() {
+      if (svgObj) {
+        let svg = new XMLSerializer().serializeToString(svgObj);
+        let type = "image/svg+xml";
+        let a = document.getElementById("downloadLink");
+        var file = new Blob([svg], {
+          type: type
+        });
+        a.href = URL.createObjectURL(file);
+        let svgName = "";
+        if (!warped && pieceSel && pieceSel.value) {
+          svgName = pieceSel.value;
+          a.innerHTML = "Download SVG";
+        }
+        if (warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
+          svgName = pieceSel.value + '_' + perfSel.value;
+          a.innerHTML = "Download Warped SVG";
+        }
+        a.download = svgName;
       }
-      if (warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
-        svgName = pieceSel.value + '_' + perfSel.value;
-        a.innerHTML = "Download Warped SVG";
-      }
-      a.download = svgName;
     }
     //
   </script>
@@ -664,7 +669,6 @@
 
 <body style="font-family:Arial, Helvetica, sans-serif">
   <h1>Let&rsquo;s do the SVG Warp again!</h1>
-  <!-- <p>Press [W] to warp, [A] to warp notes inside chords, [C] to reload original data.</p> -->
   <p>
   <form name="form1" id="form1" action="#">
     Demo pieces/performances <select name="piece" id="piece">
@@ -678,7 +682,7 @@
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
   <button onclick="loadMEI(false)">3) Reload data [C]</button>
-  <!-- <button onclick="createSVGDownloadLink()">4) Save SVG [S]</button> -->
+  <button onclick="createSVGDownloadLink()">4) Create SVG Download [D]</button>
   <a href id="downloadLink"></a>
   </p>
   <div id="notation">
