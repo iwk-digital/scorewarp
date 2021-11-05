@@ -75,10 +75,9 @@
         document.querySelector('#copyright').innerHTML +=
           `Gratefully using
             <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
-        loadMEI();
-        let log = document.getElementById('log');
-        // console.info('log: ', log);
-        document.addEventListener('keyup', logKey);
+        // loadMEI();
+        document.addEventListener('keyup', keyboardListener);
+        document.getElementById("notation").innerHTML = `<b>Verovio ${tkVersion} loaded.</b>`;
       }
     });
 
@@ -100,7 +99,7 @@
     var pieceSel;
     var perfSel;
 
-    function logKey(e) {
+    function keyboardListener(e) {
       if (e.code == 'KeyW') warp(); // warp score to match performed events
       if (e.code == 'KeyA') warpNotes(); // warp score to match performed notes
       if (e.code == "KeyC") loadMEI(); // reload MEI file
@@ -369,21 +368,23 @@
             }
           }
         } else if (item.nodeName == 'path') {
-          let segments = item.pathSegList;
-          let n = segments.numberOfItems;
+          let segList = item.pathSegList;
+          let n = segList.numberOfItems;
           let ledgerLines = item.closest('.ledgerLines');
+          // let arpeg = item.closest('.arpeg');
           if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
-            let x = Math.round((segments[0].x * 7 + segments[1].x) / 8);
+            let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
             translate(item, delta[x]);
+          // } else if (arpeg) {
+          //   translate(arpeg, delta[x], true);
           } else {
             for (let i = 0; i < n; i++) {
-              var segment = segments.getItem(i);
+              var segment = segList.getItem(i);
               segment.x += delta[Math.round(Math.max(0, segment.x))];
               if (segment.x1)
                 segment.x1 += delta[Math.round(Math.max(0, segment.x1))];
               if (segment.x2)
                 segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
-              // }
             }
           }
         } else if (item.nodeName == 'g') { // note / chord
@@ -466,19 +467,30 @@
 
     // translate item object, checking if a translate is already there.
     function translate(item, delta, useExisting = true) {
-      let transformX = 0;
-      let transform = item.transform.baseVal;
-      // console.info('Transform: ', transform);
-      if (transform && transform.length > 0) { // if transform exists
-        let firstTransform = transform.getItem(0);
-        if (useExisting) transformX = firstTransform.matrix.e;
-        transform.getItem(0).setTranslate(transformX + delta, 0);
+      let existingX = 0;
+      let trList = item.transform.baseVal; // SVGTransformList
+      if (trList && trList.length > 0) { // if transform exists
+         console.info('SVGTransformList EXISTING: ', trList);
+        let index = -1;
+        for (currTrans of trList) {
+          index++;
+          // trList.forEach((currTrans, i) => {
+          if (currTrans.type == SVG_TRANSFORM_TRANSLATE) {
+            console.info('TRANSLATION FOUND: ', item);
+            if (useExisting) existingX = currTrans.matrix.e;
+            break;
+          }
+        }
+        trList.getItem(index).setTranslate(existingX + delta, 0);
       } else { // create new transform
-        var matrix = svgObj.createSVGMatrix();
-        matrix.e = transformX + delta;
-        // console.info('matrix: ', matrix);
-        item.transform.baseVal.appendItem(
-          svgObj.createSVGTransformFromMatrix(matrix));
+         console.info('SVGTransformList EMPTY: ', trList);
+        // if (useExisting) {
+        //   existingX = trList.getItem(0).matrix.e;
+        //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
+        // }
+        let translate = svgObj.createSVGTransform();
+        translate.setTranslate(existingX + delta, 0);
+        item.transform.baseVal.appendItem(translate);
       }
     }
 
@@ -692,7 +704,6 @@
   <p id="copyright" style="font-size:xx-small;">
     <a href="https://iwk.mdw.ac.at/goebl/">Werner Goebl</a>, 26 October 2021.
   </p>
-  <p id="log"></p>
 </body>
 
 </html>
