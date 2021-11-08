@@ -442,7 +442,8 @@
             let chord = item.closest('.chord');
             if (chord && chord.querySelector('.note').getAttribute('id') ==
               item.getAttribute('id')) {
-              translate(chord.querySelector('.stem'), d);
+              let stem = chord.querySelector('.stem');
+              if (stem) translate(stem, d);
               let artics = chord.querySelectorAll('.artic');
               if (artics) artics.forEach(item => translate(item, d));
               let dots = chord.querySelectorAll('.dots');
