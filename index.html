@@ -67,8 +67,6 @@
     let tk;
     let tkVersion = '';
 
-    let debugMAX = Number.MAX_VALUE; //323;
-    // DEBUG TODO restrict maps because of bad matches
 
     document.addEventListener("DOMContentLoaded", (event) => {
       document.getElementById("notation").innerHTML = "<b>Loading Verovio.</b>";
@@ -145,6 +143,7 @@
     let y0basis = 180; // y of time axis
     let y1 = 80; // y of straigth lines
     let y2 = 0; // y of orange connector lines
+    let yMx = 200; // mx y of performance panel
 
     // draw orange lines, to connect to 'score' or to performed 'notes'
     function drawConnectorLines(target = 'score') { // 'chords', 'notes'
@@ -155,8 +154,7 @@
       let j = 0;
       // plot straight lines
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
-          i < debugMAX) { // DEBUGGING
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
           if (target == 'score')
@@ -172,6 +170,25 @@
       let pageMarginElement = document.querySelector('.page-margin');
       onsetSVGXs.forEach(item => {
         addLine(pageMarginElement, item, item, svgViewBox[3], 0, 'red', 20);
+      });
+    }
+
+    function drawWarpFunction(node, warpFunc) {
+      const g = document.createElementNS(svgNS, 'g'); // warp function in notation
+      g.setAttribute('class', 'warpFunction');
+      node.appendChild(g);
+      let mn = Number.MAX_VALUE;
+      let mx = 0;
+      warpFunc.forEach(item => {
+        if (item < mn) mn = item;
+        if (item > mx) mx = item;
+      });
+      console.info('drawWarpFunction: mn/mx: ' + mn + '/' + mx + ', svgH: ' + svgViewBox[3]);
+      let scale = svgViewBox[3] / (mx - mn);
+      let translate = 1000; // svgViewBox[3] / 2;
+      console.info('drawWarpFunction: scale/trnsl: ' + scale + '/' + translate);
+      warpFunc.forEach((item, i) => {
+        addCircle(g, i, item * scale + translate, 3, 'red');
       });
     }
 
@@ -218,7 +235,7 @@
 
       // list all warpable elements of score
       elementList = svgObj.querySelector('.page-margin').querySelectorAll(
-        'g.note, :not(g.notehead)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
+        'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
       // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
       // ellipse, circle, path');
       console.info('elementList: ', elementList);
@@ -249,11 +266,11 @@
     function loadPerformanceTiming(maps) {
       // performanceTime Panel to demonstrate
       document.getElementById("downloadLink").innerHTML = "";
-      let ptObj = createScoreTimeSVG(svgWidth, 200);
+      let ptObj = createScoreTimeSVG(svgWidth, yMx);
       ptObj.setAttribute('class', 'performanceTime')
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
       // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
-      tmx = maps[Math.min(getLastOnsetIdx(maps), debugMAX - 1)].obs_mean_onset;
+      tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
 
       // take first and last noteId to normalize...
       let id1 = maps[getFirstOnsetIdx(maps)].xml_id[0];
@@ -262,21 +279,20 @@
       fstX = svg2screen(parseFloat(el1.getAttribute('x')));
       console.info('firstNotehead x: ', fstX);
       // let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
-      let id2 = maps[Math.min(debugMAX - 1, getLastOnsetIdx(maps))].xml_id[0]; // DEBUG TODO remove this hard-wired trash
+      let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
       let el2 = document.querySelector(`[*|id="${id2}"] use[x]`);
       console.info('el2: ', el2);
       lstX = svg2screen(parseFloat(el2.getAttribute('x')));
       console.info('lastNotehead x: ', lstX);
 
-      addLine(ptObj, fstX, fstX, y0basis, 200, 'blue'); // first line
-      addLine(ptObj, lstX, lstX, y0basis, 200, 'blue'); // last line
+      addLine(ptObj, fstX, fstX, y0basis, yMx, 'blue'); // first line
+      addLine(ptObj, lstX, lstX, y0basis, yMx, 'blue'); // last line
 
       // calculate score note coordinates
       noteXs = [];
       noteSVGXs = [];
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
-          i < debugMAX) { // DEBUGGING!!!
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
           let note = document.querySelector('[*|id="' + item.xml_id[0] + '"]');
           if (note) {
             let use = note.querySelector('g.notehead use');
@@ -293,8 +309,7 @@
       onsetSVGXs = [];
       // calculate noteSVGs and plot onset info to ptObj
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
-          i < debugMAX) { // TODO DEBUG DEBUGGING
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
           // let screenX = (t - tmn) / (tmx - tmn) * svgWidth + fstX;
           let t = item.obs_mean_onset;
           let screenX = time2screen(t);
@@ -318,6 +333,12 @@
 
       drawConnectorLines('score');
       drawTimeAxis(document.querySelector('.performanceTime'));
+
+      // DEBUG: plot warping function...
+      // let pageMarginElement = document.querySelector('.page-margin');
+      // drawWarpFunction(pageMarginElement,
+      //   createWarpingFunction(noteSVGXs, svgViewBox));
+
       // createSVGDownloadLink(serializer.serializeToString(svgObj));
       // drawPerformanceLinesInSvg();
     }
@@ -383,12 +404,10 @@
           let segList = item.pathSegList;
           let n = segList.numberOfItems;
           let ledgerLines = item.closest('.ledgerLines');
-          // let arpeg = item.closest('.arpeg');
           if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
+            // console.info('shiftElements ledgerLines: ', ledgerLines);
             let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
             translate(item, delta[x]);
-            // } else if (arpeg) {
-            //   translate(arpeg, delta[x], true);
           } else {
             for (let i = 0; i < n; i++) {
               var segment = segList.getItem(i);
@@ -399,20 +418,24 @@
                 segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
             }
           }
-        } else if (item.nodeName == 'g') { // note / chord
-          let d = 0;
+        } else if (item.nodeName == 'g') { // note / chord / arpeg
           let x = getX(item);
-          d = delta[Math.round(x)];
-          translate(item, d); // translate in combination with existing translte
-          let chord = item.closest('.chord');
-          // if within a chord and first note in chord, translate stem/artic too
-          if (chord && chord.querySelector('.note').getAttribute('id') ==
-            item.getAttribute('id')) {
-            translate(chord.querySelector('.stem'), d);
-            let artics = chord.querySelectorAll('.artic');
-            if (artics) artics.forEach(item => translate(item, d));
-            let dots = chord.querySelectorAll('.dots');
-            if (dots) dots.forEach(item => translate(item, d));
+          let d = delta[Math.round(x)];
+          if (item.className.baseVal == "arpeg") {
+            console.info('shiftElements ARPEG: ', item);
+            addTranslation(item, d);
+          } else {
+            translate(item, d); // translate in combination w\ existing translte
+            // if within chord & first note in chord, translate stem/artic too
+            let chord = item.closest('.chord');
+            if (chord && chord.querySelector('.note').getAttribute('id') ==
+              item.getAttribute('id')) {
+              translate(chord.querySelector('.stem'), d);
+              let artics = chord.querySelectorAll('.artic');
+              if (artics) artics.forEach(item => translate(item, d));
+              let dots = chord.querySelectorAll('.dots');
+              if (dots) dots.forEach(item => translate(item, d));
+            }
           }
           // console.info('transform on ', item);
         } else { // rect, use, text, ellipse, circle
@@ -431,14 +454,15 @@
 
     function adjustIndividualNotes() {
       maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps) &&
-          i < debugMAX) { // DEBUGGING
+        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
           let onsetSVGx = time2svg(item.obs_mean_onset);
-          item.xml_id.forEach(item => {
-            let note = svgObj.querySelector(`[*|id="${item}"]`);
-            let use = note.querySelector('g.notehead use');
-            let noteX = parseFloat(use.getAttribute('x'));
-            translate(note, onsetSVGx - noteX, false);
+          item.xml_id.forEach(id => {
+            let note = svgObj.querySelector(`[*|id="${id}"]`);
+            if (note) {
+              let use = note.querySelector('g.notehead use');
+              let noteX = parseFloat(use.getAttribute('x'));
+              translate(note, onsetSVGx - noteX, false);
+            }
           });
         }
       });
@@ -452,10 +476,10 @@
       // console.info('svgViewBox, ', svgViewBox);
       // console.info('warpFunc width: ', width);
       let warpFunc = [];
-      let [j, i0, v1, v2, ip, lastIp] = [0, 0, 0, 0, 0, 0];
-      for (let i = 0; i < width; i++) {
-        if (noteSVGXs[j] <= i) {
-          i0 = i;
+      let [j, x0, v1, v2, ip, lastIp] = [0, 0, 0, 0, 0, 0];
+      for (let x = 0; x < width; x++) {
+        if (noteSVGXs[j] <= x) {
+          x0 = x;
           j++;
         }
         if (j <= 0 || j >= width) ip = lastIp;
@@ -463,12 +487,12 @@
           v1 = onsetSVGXs[j - 1] - noteSVGXs[j - 1]; // onset minus note
           v2 = onsetSVGXs[Math.min(j, onsetSVGXs.length - 1)] -
             noteSVGXs[Math.min(j, noteSVGXs.length - 1)];
-          ip = lerp(v1, v2, (i - i0) / (noteSVGXs[j] - noteSVGXs[j - 1]));
+          ip = lerp(v1, v2, (x - x0) / (noteSVGXs[j] - noteSVGXs[j - 1]));
           if (!ip) ip = lastIp;
         }
         warpFunc.push(ip);
         lastIp = ip;
-        // console.info('i: ', i + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
+        // console.info('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
       };
       return warpFunc;
     }
@@ -487,7 +511,7 @@
         for (currTrans of trList) {
           index++;
           // trList.forEach((currTrans, i) => {
-          if (currTrans.type == SVG_TRANSFORM_TRANSLATE) {
+          if (currTrans.type == SVGTransform.SVG_TRANSFORM_TRANSLATE) {
             console.info('TRANSLATION FOUND: ', item);
             if (useExisting) existingX = currTrans.matrix.e;
             break;
@@ -495,7 +519,7 @@
         }
         trList.getItem(index).setTranslate(existingX + delta, 0);
       } else { // create new transform
-        console.info('SVGTransformList EMPTY: ', trList);
+        // console.info('SVGTransformList EMPTY: ', trList);
         // if (useExisting) {
         //   existingX = trList.getItem(0).matrix.e;
         //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
@@ -504,6 +528,12 @@
         translate.setTranslate(existingX + delta, 0);
         item.transform.baseVal.appendItem(translate);
       }
+    }
+
+    function addTranslation(item, delta) {
+      let newTranslate = svgObj.createSVGTransform();
+      newTranslate.setTranslate(delta, 0);
+      item.transform.baseVal.insertItemBefore(newTranslate, 0);
     }
 
     function shiftBeam(beam, polygon, delta) {
@@ -566,6 +596,16 @@
       return node.appendChild(line);
     }
 
+    function addCircle(node, cx, cy, r, color = "black", strokeWidth = 1) {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', cx);
+      circle.setAttribute('cy', cy);
+      circle.setAttribute('r', r);
+      circle.setAttribute('stroke-width', strokeWidth);
+      circle.setAttribute('stroke', color);
+      return node.appendChild(circle);
+    }
+
     function addText(node, text, x, y, halign = "middle", color = "black") {
       let txt = document.createElementNS(svgNS, 'text');
       txt.setAttribute('text-anchor', halign);
@@ -579,17 +619,20 @@
     }
 
     function drawTimeAxis(node, toScreen = true, y = y0basis, color = "black") {
+      const g = document.createElementNS(svgNS, 'g'); // time axis in notation
+      g.setAttribute('class', 'timeAxis');
+      node.appendChild(g);
       let incr = 10; // seconds
       let lastTick = Math.ceil(tmx / incr) * incr;
       let s, s2;
       for (let t = 0; t <= lastTick; t += incr) {
         (toScreen) ? s = time2screen(t): s = time2svg(t);
-        addLine(node, s, s, y, y + 2, color, 1);
-        addText(node, t, s, y + 12, 'middle', color);
+        addLine(g, s, s, y, y + 2, color, 1);
+        addText(g, t, s, y + 12, 'middle', color);
         if (t == 0) {
           (toScreen) ? s2 = time2screen(lastTick): time2svg(lastTick);
-          addLine(node, s, s2, y, y, color, 1);
-          addText(node, 'Time (s)', 1, y - 4, "left", color);
+          addLine(g, s, s2, y, y, color, 1);
+          addText(g, 'Time (s)', 1, y - 4, "left", color);
         }
       }
     }
