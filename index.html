@@ -519,13 +519,13 @@
       let existingX = 0;
       let trList = item.transform.baseVal; // SVGTransformList
       if (trList && trList.length > 0) { // if transform exists
-        console.info('SVGTransformList EXISTING: ', trList);
+        // console.info('SVGTransformList EXISTING: ', trList);
         let index = -1;
         for (currTrans of trList) {
           index++;
           // trList.forEach((currTrans, i) => {
           if (currTrans.type == SVGTransform.SVG_TRANSFORM_TRANSLATE) {
-            console.info('TRANSLATION FOUND: ', item);
+            // console.info('TRANSLATION FOUND: ', item);
             if (useExisting) existingX = currTrans.matrix.e;
             break;
           }
