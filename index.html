@@ -11,7 +11,11 @@
     //
     //
     // TODO DEBUG: accept user files
-    let meiFileName = "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
+
+    let defaultPiece = 'Beethoven Op119_No1_1';
+    let defaultMeiFileName = "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
+    //
+    let meiFileName = defaultMeiFileName;
     // let mapsFileName = "https://iwk.mdw.ac.at/goebl/svgwarp/eval/Beethoven_Op119_1_maps.json";
     let mapsFileName = "./eval/Beethoven_Op119_1_maps.json";
 
@@ -75,7 +79,15 @@
         document.querySelector('#copyright').innerHTML +=
           `Gratefully using
             <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
-        // loadMEI();
+        loadMEI();
+        // update dropdown menues
+        document.getElementById("piece").value = defaultPiece;
+        let perfSel = document.getElementById("performance");
+        perfSel.length = 1;
+        for (var y in demoFiles[defaultPiece].performances) {
+          perfSel.options[perfSel.options.length] = new Option(y, y);
+        }
+        // add keyboardListeners and update notation panel
         document.addEventListener('keyup', keyboardListener);
         document.getElementById("notation").innerHTML = `<b>Verovio ${tkVersion} loaded.</b>`;
       }
@@ -375,8 +387,8 @@
           if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
             let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
             translate(item, delta[x]);
-          // } else if (arpeg) {
-          //   translate(arpeg, delta[x], true);
+            // } else if (arpeg) {
+            //   translate(arpeg, delta[x], true);
           } else {
             for (let i = 0; i < n; i++) {
               var segment = segList.getItem(i);
@@ -470,7 +482,7 @@
       let existingX = 0;
       let trList = item.transform.baseVal; // SVGTransformList
       if (trList && trList.length > 0) { // if transform exists
-         console.info('SVGTransformList EXISTING: ', trList);
+        console.info('SVGTransformList EXISTING: ', trList);
         let index = -1;
         for (currTrans of trList) {
           index++;
@@ -483,7 +495,7 @@
         }
         trList.getItem(index).setTranslate(existingX + delta, 0);
       } else { // create new transform
-         console.info('SVGTransformList EMPTY: ', trList);
+        console.info('SVGTransformList EMPTY: ', trList);
         // if (useExisting) {
         //   existingX = trList.getItem(0).matrix.e;
         //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
