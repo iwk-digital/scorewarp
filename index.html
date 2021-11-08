@@ -23,8 +23,17 @@
       "Beethoven Op53_1": {
         "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op53_HenleUrtext/master/Beethoven_Op53_1-HenleUrtext.mei",
         "performances": {
-          "53 Pianist 1": "",
-          "53 Pianist 2": ""
+          "53 P02 Performance A": "./eval/Op53_1_P02-A.boe.mid.maps.expansion-default.json",
+          "53 P02 Performance B": "./eval/Op53_1_P02-B.boe.mid.maps.expansion-default.json",
+          "53 P02 Performance C": "./eval/Op53_1_P02-C.boe.mid.maps.expansion-default.json",
+          "53 P04 Performance A": "./eval/Op53_1_P04-A.boe.mid.maps.expansion-default.json",
+          "53 P04 Performance B": "./eval/Op53_1_P04-B.boe.mid.maps.expansion-default.json",
+          "53 P04 Performance C": "./eval/Op53_1_P04-C.boe.mid.maps.expansion-default.json",
+          "53 P07 Performance A": "./eval/Op53_1_P07-A.boe.mid.maps.expansion-default.json",
+          "53 P07 Performance B": "./eval/Op53_1_P07-B.boe.mid.maps.expansion-default.json",
+          "53 P08 Performance A": "./eval/Op53_1_P08-A.boe.mid.maps.expansion-default.json",
+          "53 P08 Performance B": "./eval/Op53_1_P08-B.boe.mid.maps.expansion-default.json",
+          "53 P08 Performance C": "./eval/Op53_1_P08-C.boe.mid.maps.expansion-default.json"
         }
       },
       "Beethoven Op53_2": {
@@ -406,7 +415,10 @@
           let ledgerLines = item.closest('.ledgerLines');
           if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
             // console.info('shiftElements ledgerLines: ', ledgerLines);
-            let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
+            // console.info('segList x: ' + segList[0].x + '/' + segList[1].x);
+            // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
+            let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
+            // console.info('x=' + x);
             translate(item, delta[x]);
           } else {
             for (let i = 0; i < n; i++) {
