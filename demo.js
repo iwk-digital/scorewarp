@@ -41,6 +41,20 @@ const demoFiles = {
       "Op31-No2_2 D4": "./eval/REC044_12-19_1210.boe.mid.maps.expansion-default.json"
     }
   },
+  "Beethoven Op31_No3_1": {
+    "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_1-HenleUrtext.mei",
+    "performances": {
+      "Op31-No3_1 P01 Performance A": "./eval/Op31_No3_1_P01-A.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P01 Performance B": "./eval/Op31_No3_1_P01-B.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P01 Performance C": "./eval/Op31_No3_1_P01-C.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P05 Performance A": "./eval/Op31_No3_1_P05-A.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P05 Performance B": "./eval/Op31_No3_1_P05-B.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P05 Performance C": "./eval/Op31_No3_1_P05-C.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P06 Performance A": "./eval/Op31_No3_1_P06-A.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P06 Performance B": "./eval/Op31_No3_1_P06-B.boe.mid.maps.expansion-default.json",
+      "Op31-No3_1 P06 Performance C": "./eval/Op31_No3_1_P06-C.boe.mid.maps.expansion-default.json",
+    }
+  },
   "Beethoven Op119_No1_1": {
     "meiFile": "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei",
     "performances": {
