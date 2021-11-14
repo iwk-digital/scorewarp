@@ -585,18 +585,27 @@
       const g = document.createElementNS(svgNS, 'g'); // time axis in notation
       g.setAttribute('class', 'timeAxis');
       node.appendChild(g);
-      let incr = 10; // seconds
-      let lastTick = Math.ceil(tmx / incr) * incr;
+      let tickIncr = 1; // seconds
+      let numbIncr = 10; // seconds
+      let lastTick = Math.ceil(tmx / numbIncr) * numbIncr;
       let s, s2;
-      for (let t = 0; t <= lastTick; t += incr) {
+      // draw tick lines and horizontal axis and label
+      for (let t = 0; t <= lastTick; t += tickIncr) {
         (toScreen) ? s = time2screen(t): s = time2svg(t);
-        addLine(g, s, s, y, y + 2, color, 1);
-        addText(g, t, s, y + 12, 'middle', color);
-        if (t == 0) {
+        if (Math.round(t / numbIncr) == t / numbIncr)
+          addLine(g, s, s, y, y + 4, color, 1); // longer tick line
+        else
+          addLine(g, s, s, y, y + 2, color, 1); // short tick line
+        if (t == 0) { // draw horizontal axis and axis label
           (toScreen) ? s2 = time2screen(lastTick): time2svg(lastTick);
           addLine(g, s, s2, y, y, color, 1);
           addText(g, 'Time (s)', 1, y - 4, "left", color);
         }
+      }
+      // draw tick label numbers
+      for (let t = 0; t <= lastTick; t += numbIncr) {
+        (toScreen) ? s = time2screen(t): s = time2svg(t);
+        addText(g, t, s, y + 13, 'middle', color);
       }
     }
 
