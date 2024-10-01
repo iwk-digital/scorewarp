@@ -1,0 +1,7 @@
+.presentationPanel {
+    border-width: 1px;
+    border-style: solid;
+    border-color: darkgray;
+    border-radius: 5px;
+    width: fit-content;
+}
