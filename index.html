@@ -8,35 +8,25 @@
   <!-- <script src="http://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js" defer></script> -->
   <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js" defer></script>
   <script src="./demo.js"></script>
+  <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
   <script>
-    // import {
-    //   demoFiles,
-    //   defaultPiece,
-    //   defaultMeiFileName,
-    //   defaultMapsFileName
-    // } from './demo.js';
-    // import * from './demo.js';
+
     // TODO DEBUG: accept user files
 
     let meiFileName = '';
     let mapsFileName = '';
 
-    const dateString = 'debug version, 1 October 2024';
+    const dateString = 'debug version, 2 October 2024';
     const svgNS = "http://www.w3.org/2000/svg";
-    let maps; // maps data
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
 
     let svgString; // raw SVG text string of engraved MEI file
-    let svgObj; // parsed SVG object
+    let scoreWarper; // score warper object
     let noteXs; // x values of notes on screen
     let noteSVGXs; // x values of notes in SVG
     let onsetSVGXs = []; // SVG x values of onset times
-    let svgWidth;
-    let svgHeight;
-    let svgViewBox;
-    let pgMarginX;
     let elementList; // a nodeList of elements that need to be warped
     let fstX;
     let lstX;
@@ -140,20 +130,18 @@
       // parse SVG text to SVG object
       let svgDocument = new DOMParser().parseFromString(svgString, "image/svg+xml");
       if (svgDocument.childNodes && svgDocument.childNodes.length > 0) {
-        svgObj = svgDocument.childNodes[0];
-        console.log("SVG parsed.", svgObj);
+        scoreWarper = new ScoreWarper(svgDocument.childNodes[0]);
+        console.log("SVG inside ScoreWarper:", scoreWarper.svgObj);
       }
 
       // update notation panel
       let notationDiv = document.getElementById("notation");
       notationDiv.innerHTML = "<p><b>" + pieceSel.value + "</b></p>";
-      notationDiv.appendChild(svgObj);
+      notationDiv.appendChild(scoreWarper.svgObj);
       console.info('NotationDiv: ', notationDiv);
 
-      calculateScoreCoordinates();
-
       // list all warpable elements of score
-      elementList = svgObj.querySelector('.page-margin').querySelectorAll(
+      elementList = scoreWarper.svgObj.querySelector('.page-margin').querySelectorAll(
         'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
       // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
       // ellipse, circle, path');
@@ -177,7 +165,7 @@
       if (e.code == 'KeyW') warp(); // warp score to match performed events
       if (e.code == 'KeyA') warpNotes(); // warp score to match performed notes
       if (e.code == "KeyC") loadMEI(false); // reload MEI file
-      if (e.code == "KeyD" && svgObj) { // create SVG download link
+      if (e.code == "KeyD" && scoreWarper.svgObj) { // create SVG download link
         createSVGDownloadLink();
       }
     } // keyboardListener()
@@ -186,11 +174,11 @@
       if (!noteSVGXs) return;
       if (!warped) {
         document.getElementById("downloadLink").innerHTML = "";
-        let warpFunc = createWarpingFunction(noteSVGXs, svgViewBox);
+        let warpFunc = createWarpingFunction(noteSVGXs, scoreWarper.svgViewBox);
         console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
         shiftElements(elementList, warpFunc);
         drawConnectorLines('chords');
-        drawTimeAxis(svgObj, true, svgHeight - 20, 'cornflowerblue');
+        drawTimeAxis(scoreWarper.svgObj, true, scoreWarper.svgHeight - 20, 'cornflowerblue');
         warped = true;
         // createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
       }
@@ -217,8 +205,8 @@
           .forEach(item => item.remove());
       let j = 0;
       // plot straight lines
-      maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
+      scoreWarper.maps.forEach((item, i) => {
+        if (i >= getFirstOnsetIdx(scoreWarper.maps) && i <= getLastOnsetIdx(scoreWarper.maps)) {
           let t = item.obs_mean_onset;
           let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
           if (target == 'score')
@@ -229,14 +217,21 @@
       });
     }
 
-    // draws orange lines inside SVG (for debugging)
+    /**
+     * Draws orange lines inside SVG (for debugging)
+     */
     function drawPerformanceLinesInSvg() {
       let pageMarginElement = document.querySelector('.page-margin');
       onsetSVGXs.forEach(item => {
-        addLine(pageMarginElement, item, item, svgViewBox[3], 0, 'red', 20);
+        addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
       });
-    }
+    } // drawPerformanceLinesInSvg()
 
+    /**
+     * Draws warp function in notation panel
+     * @param {Element} node - the parent node to which the warp function will be added
+     * @param {Array} warpFunc - the warping function
+     */
     function drawWarpFunction(node, warpFunc) {
       const g = document.createElementNS(svgNS, 'g'); // warp function in notation
       g.setAttribute('class', 'warpFunction');
@@ -247,42 +242,30 @@
         if (item < mn) mn = item;
         if (item > mx) mx = item;
       });
-      console.info('drawWarpFunction: mn/mx: ' + mn + '/' + mx + ', svgH: ' + svgViewBox[3]);
-      let scale = svgViewBox[3] / (mx - mn);
+      console.info('drawWarpFunction: mn/mx: ' + mn + '/' + mx + ', svgH: ' + scoreWarper.svgViewBox[3]);
+      let scale = scoreWarper.svgViewBox[3] / (mx - mn);
       let translate = 1000; // svgViewBox[3] / 2;
       console.info('drawWarpFunction: scale/trnsl: ' + scale + '/' + translate);
       warpFunc.forEach((item, i) => {
         addCircle(g, i, item * scale + translate, 3, 'red');
       });
-    }
+    } // drawWarpFunction()
 
+    /**
+     * Clears all lines from the performanceTime panel
+     */
     function clearAllLines() {
       let pt = document.querySelector('.performanceTime');
       if (pt) pt.querySelectorAll('line').forEach(item => item.remove());
       let pm = document.querySelector('.page-margin');
       console.info('clearAllLines pm: ', pm);
       if (pm) pm.querySelectorAll('line').forEach(item => item.remove());
-    }
-
-    function calculateScoreCoordinates() {
-      svgWidth = parseFloat(svgObj.getAttribute('width'));
-      svgHeight = parseFloat(svgObj.getAttribute('height'));
-      svgViewBox = svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
-      svgViewBox = svgViewBox.split(' ').map(Number);
-      let pageMarginElement = svgObj.querySelector('.page-margin');
-      let transformations = pageMarginElement.transform.baseVal;
-      console.info('svgObj: ', svgObj);
-      console.info('svgObj width: ', svgWidth);
-      console.info('svgObj viewBox: ', svgViewBox);
-      console.info('svgObj transform: ', pageMarginElement.transform);
-      console.info('svgObj transform bsVl: ', transformations.getItem(0));
-      pgMarginX = transformations.getItem(0).matrix.e;
-    }
+    } // clearAllLines()
 
     function loadPerformanceTiming(maps) {
       // performanceTime Panel to demonstrate
       document.getElementById("downloadLink").innerHTML = "";
-      let ptObj = createScoreTimeSVG(svgWidth, yMx);
+      let ptObj = createScoreTimeSVG(scoreWarper.svgWidth, yMx);
       ptObj.setAttribute('class', 'performanceTime')
       tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
       // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
@@ -354,12 +337,12 @@
       if (true) {
         let pageMarginElement = document.querySelector('.page-margin');
         drawWarpFunction(pageMarginElement,
-          createWarpingFunction(noteSVGXs, svgViewBox));
+          createWarpingFunction(noteSVGXs, scoreWarper.svgViewBox));
 
-        createSVGDownloadLink(serializer.serializeToString(svgObj));
+        createSVGDownloadLink(serializer.serializeToString(scoreWarper.svgObj));
         drawPerformanceLinesInSvg();
       }
-    }
+    } // loadPerformanceTiming()
 
     function getFirstOnsetIdx(maps) {
       let i = 0;
@@ -412,7 +395,7 @@
             console.info('ShiftPolygon ', item);
             console.info('with ' + n + ' points: ', item.points);
             for (let m = 0; m < n; m++) {
-              var mySVGPoint = svgObj.createSVGPoint();
+              var mySVGPoint = scoreWarper.svgObj.createSVGPoint();
               let x = pointsList.getItem(m).x;
               mySVGPoint.x = x + delta[Math.round(x)];
               mySVGPoint.y = pointsList.getItem(m).y;
@@ -489,11 +472,11 @@
     }
 
     function adjustIndividualNotes() {
-      maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
+      scoreWarper.maps.forEach((item, i) => {
+        if (i >= getFirstOnsetIdx(scoreWarper.maps) && i <= getLastOnsetIdx(scoreWarper.maps)) {
           let onsetSVGx = time2svg(item.obs_mean_onset);
           item.xml_id.forEach(id => {
-            let note = svgObj.querySelector(`[*|id="${id}"]`);
+            let note = scoreWarper.svgObj.querySelector(`[*|id="${id}"]`);
             if (note) {
               let use = note.querySelector('g.notehead use');
               let noteX = parseFloat(use.getAttribute('x'));
@@ -560,14 +543,14 @@
         //   existingX = trList.getItem(0).matrix.e;
         //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
         // }
-        let translate = svgObj.createSVGTransform();
+        let translate = scoreWarper.svgObj.createSVGTransform();
         translate.setTranslate(existingX + delta, 0);
         item.transform.baseVal.appendItem(translate);
       }
     }
 
     function addTranslation(item, delta) {
-      let newTranslate = svgObj.createSVGTransform();
+      let newTranslate = scoreWarper.svgObj.createSVGTransform();
       newTranslate.setTranslate(delta, 0);
       item.transform.baseVal.insertItemBefore(newTranslate, 0);
     }
@@ -607,7 +590,7 @@
       x2 = n2.querySelector('.notehead>use').getAttribute('x');
 
       for (let m = 0; m < polygon.points.numberOfItems; m++) {
-        var mySVGPoint = svgObj.createSVGPoint();
+        var mySVGPoint = scoreWarper.svgObj.createSVGPoint();
         let x = polygon.points.getItem(m).x;
         if (m == 0 || m == 3)
           mySVGPoint.x = x + delta[Math.round(x1)];
@@ -707,8 +690,10 @@
     }
 
     // convert svg x coordinates inside pageMargin to screen coordinates
-    function svg2screen(x, pageMarginX) {
-      return (x + pgMarginX) * svgWidth / (svgViewBox[2] - svgViewBox[0]);
+    function svg2screen(x) {
+      let newX = (x + scoreWarper.pageMarginX) * scoreWarper.svgWidth;
+      let viewBoxWidth = scoreWarper.svgViewBox[2] - scoreWarper.svgViewBox[0];
+      return newX / viewBoxWidth;
     }
 
     function indexOfMin(a, notThis = -1) {
@@ -734,10 +719,11 @@
       fetch(mapsFileName)
         .then(response => response.json())
         .then(json => {
-          maps = json;
-          loadPerformanceTiming(maps);
+          // set maps object in scoreWarper
+          scoreWarper.maps = json;
+          loadPerformanceTiming(scoreWarper.maps);
         });
-      console.info('updateMapsFile maps: ', maps);
+      console.info('updateMapsFile maps: ', scoreWarper.maps);
     }
 
     window.onload = function () {
@@ -768,8 +754,8 @@
 
     // creates a downloadable file with svg as text, and a download link
     function createSVGDownloadLink() {
-      if (svgObj) {
-        let svg = new XMLSerializer().serializeToString(svgObj);
+      if (scoreWarper.svgObj) {
+        let svg = new XMLSerializer().serializeToString(scoreWarper.svgObj);
         let type = "image/svg+xml";
         let a = document.getElementById("downloadLink");
         var file = new Blob([svg], {
@@ -793,7 +779,7 @@
 </head>
 
 <body style="font-family:Arial, Helvetica, sans-serif">
-  <h1>Let&rsquo;s do the SVG Warp again!</h1>
+  <h1>Let&rsquo;s do the Score Warp again!</h1>
   <p>
   <form name="form1" id="form1" action="#">
     Demo pieces/performances <select name="piece" id="piece">
