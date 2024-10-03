@@ -17,21 +17,14 @@
     let meiFileName = '';
     let mapsFileName = '';
 
-    const dateString = 'debug version, 2 October 2024';
+    const dateString = 'debug version, 3 October 2024';
     const svgNS = "http://www.w3.org/2000/svg";
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
 
     let svgString; // raw SVG text string of engraved MEI file
     let scoreWarper; // score warper object
-    let noteXs; // x values of notes on screen
-    let noteSVGXs; // x values of notes in SVG
-    let onsetSVGXs = []; // SVG x values of onset times
     let elementList; // a nodeList of elements that need to be warped
-    let fstX;
-    let lstX;
-    let tmn; // min performance time
-    let tmx; // max
     let warped = false;
     var pieceSel;
     var perfSel;
@@ -171,26 +164,32 @@
     } // keyboardListener()
 
     function warp() {
-      if (!noteSVGXs) return;
+      if (!scoreWarper.noteSVGXs) return;
       if (!warped) {
+        // clear download link element
         document.getElementById("downloadLink").innerHTML = "";
-        let warpFunc = createWarpingFunction(noteSVGXs, scoreWarper.svgViewBox);
-        console.info('Do The SVG Warp AGAIN! warpFunc: ', warpFunc);
-        shiftElements(elementList, warpFunc);
+
+        scoreWarper.warp();
+
         drawConnectorLines('chords');
         drawTimeAxis(scoreWarper.svgObj, true, scoreWarper.svgHeight - 20, 'cornflowerblue');
         warped = true;
         // createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
       }
-    }
+    } // warp()
 
     function warpNotes() {
       if (warped) {
+        // clear download link element
         document.getElementById("downloadLink").innerHTML = "";
-        adjustIndividualNotes();
+
+        scoreWarper.warpIndividualNotes();
+
         drawConnectorLines('notes');
+      } else {
+        console.info('Please warp the score first.');
       }
-    }
+    } // warpNotes()
 
     let y0basis = 180; // y of time axis
     let y1 = 80; // y of straigth lines
@@ -206,23 +205,25 @@
       let j = 0;
       // plot straight lines
       scoreWarper.maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(scoreWarper.maps) && i <= getLastOnsetIdx(scoreWarper.maps)) {
+        if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) &&
+          i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
           let t = item.obs_mean_onset;
-          let screenX = (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
+          let screenX = (t - scoreWarper.tmn) / (scoreWarper.tmx - scoreWarper.tmn) *
+            (scoreWarper.lstX - scoreWarper.fstX) + scoreWarper.fstX;
           if (target == 'score')
-            addLine(pt, screenX, noteXs[j++], y1, y2, 'orange');
+            addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
           else
             addLine(pt, screenX, screenX, y1, y2, 'orange');
         }
       });
-    }
+    } // drawConnectorLines()
 
     /**
      * Draws orange lines inside SVG (for debugging)
      */
     function drawPerformanceLinesInSvg() {
       let pageMarginElement = document.querySelector('.page-margin');
-      onsetSVGXs.forEach(item => {
+      scoreWarper.onsetSVGXs.forEach(item => {
         addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
       });
     } // drawPerformanceLinesInSvg()
@@ -263,64 +264,25 @@
     } // clearAllLines()
 
     function loadPerformanceTiming(maps) {
+      scoreWarper.maps = maps;
+
       // performanceTime Panel to demonstrate
       document.getElementById("downloadLink").innerHTML = "";
       let ptObj = createScoreTimeSVG(scoreWarper.svgWidth, yMx);
-      ptObj.setAttribute('class', 'performanceTime')
-      tmn = maps[getFirstOnsetIdx(maps)].obs_mean_onset;
-      // let tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
-      tmx = maps[getLastOnsetIdx(maps)].obs_mean_onset;
+      ptObj.setAttribute('class', 'performanceTime');
 
-      // take first and last noteId to normalize...
-      let id1 = maps[getFirstOnsetIdx(maps)].xml_id[0];
-      let el1 = document.querySelector(`[*|id="${id1}"] use[x]`);
-      console.info('el1: ', el1);
-      fstX = svg2screen(parseFloat(el1.getAttribute('x')));
-      console.info('firstNotehead x: ', fstX);
-      // let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
-      let id2 = maps[getLastOnsetIdx(maps)].xml_id[0];
-      let el2 = document.querySelector(`[*|id="${id2}"] use[x]`);
-      console.info('el2: ', el2);
-      lstX = svg2screen(parseFloat(el2.getAttribute('x')));
-      console.info('lastNotehead x: ', lstX);
+      addLine(ptObj, scoreWarper.fstX, scoreWarper.fstX, y0basis, yMx, 'blue'); // first line
+      addLine(ptObj, scoreWarper.lstX, scoreWarper.lstX, y0basis, yMx, 'blue'); // last line
 
-      addLine(ptObj, fstX, fstX, y0basis, yMx, 'blue'); // first line
-      addLine(ptObj, lstX, lstX, y0basis, yMx, 'blue'); // last line
-
-      // calculate score note coordinates
-      noteXs = [];
-      noteSVGXs = [];
-      maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
-          let note = document.querySelector('[*|id="' + item.xml_id[0] + '"]');
-          if (note) {
-            let use = note.querySelector('g.notehead use');
-            let noteX = parseFloat(use.getAttribute('x'));
-            // console.info(i + '; noteSVGX: ', noteX + ', note: ', note);
-            noteSVGXs.push(noteX); // pure SVG x values (without page-margin)
-            noteXs.push(svg2screen(noteX));
-          } else {
-            console.info(i + '; note: NOT FOUND');
-          }
-        }
-      });
-
-      onsetSVGXs = [];
-      // calculate noteSVGs and plot onset info to ptObj
-      maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(maps) && i <= getLastOnsetIdx(maps)) {
-          // let screenX = (t - tmn) / (tmx - tmn) * svgWidth + fstX;
-          let t = item.obs_mean_onset;
-          let screenX = time2screen(t);
+      // plot onset info to ptObj
+      scoreWarper.maps.forEach((item, i) => {
+        if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) &&
+          i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
+          let screenX = scoreWarper.time2screen(item.obs_mean_onset);
           addLine(ptObj, screenX, screenX, 80, 180, 'purple');
           // save onset time data in SVG coordinates
-          onsetSVGXs.push(time2svg(t));
         }
       });
-      console.info('loadPerformanceTiming: timing mn/mx ' + tmn + '/' + tmx);
-      console.info('loadPerformanceTiming: onsetSVGXs', onsetSVGXs);
-      console.info('loadPerformanceTiming: noteSVGXs', noteSVGXs);
-      console.info('loadPerformanceTiming: noteXs', noteXs);
 
       // scoreTimeDiv.appendChild(createScoreTimeSVG(bb.width, 200));
       const serializer = new XMLSerializer();
@@ -336,270 +298,12 @@
       // DEBUG: plot warping function...
       if (true) {
         let pageMarginElement = document.querySelector('.page-margin');
-        drawWarpFunction(pageMarginElement,
-          createWarpingFunction(noteSVGXs, scoreWarper.svgViewBox));
+        drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
 
         createSVGDownloadLink(serializer.serializeToString(scoreWarper.svgObj));
         drawPerformanceLinesInSvg();
       }
     } // loadPerformanceTiming()
-
-    function getFirstOnsetIdx(maps) {
-      let i = 0;
-      while (maps[i].obs_mean_onset < 0) i++;
-      // console.info('getFirstOnsetIdx i: ' + i);
-      return i;
-    }
-
-    function getLastOnsetIdx(maps) {
-      let i = maps.length - 1;
-      while (maps[i].xml_id[0].includes('trompa')) i--;
-      // console.info('getLastOnsetIdx i: ' + i);
-      return i;
-    }
-
-    // Returns x value in pure SVG coordinates of SVG element ()
-    function getX(el) {
-      switch (el.nodeName) {
-        case 'polygon':
-          return el.points.getItem(0).x;
-        case 'path':
-          return el.pathSegList.getItem(0).x;
-        case 'ellipse' || 'circle':
-          return parseFloat(el.getAttribute('cx'));
-        case 'rect' || 'use' || 'text':
-          return parseFloat(el.getAttribute('x'));
-        case 'g': // for .chord, .note
-          let className = el.getAttribute('class');
-          if (className && (className == 'chord' || className == 'note'))
-            return parseFloat(
-              el.querySelector('.notehead>use[x]').getAttribute('x'));
-          else
-            return parseFloat(el.querySelector('use[x]').getAttribute('x'));
-      }
-    }
-
-    // shift elements horizontally by modifying all x coordinates using
-    // the delta warpingFunction
-    function shiftElements(elementList, delta) {
-      elementList.forEach(item => {
-        console.info('Shifting ', item);
-        if (item.nodeName == 'polygon') { // beam,
-          let pointsList = item.points;
-          let n = pointsList.numberOfItems;
-          let beam = item.closest('.beam');
-          if (beam && n == 4) {
-            // shift beam with 4 points
-            shiftBeam(beam, item, delta);
-          } else {
-            console.info('ShiftPolygon ', item);
-            console.info('with ' + n + ' points: ', item.points);
-            for (let m = 0; m < n; m++) {
-              var mySVGPoint = scoreWarper.svgObj.createSVGPoint();
-              let x = pointsList.getItem(m).x;
-              mySVGPoint.x = x + delta[Math.round(x)];
-              mySVGPoint.y = pointsList.getItem(m).y;
-              pointsList.replaceItem(mySVGPoint, m);
-            }
-          }
-        } else if (item.nodeName == 'path') {
-          // let bbox = item.getBBox();
-          // console.log('Path BBox: ', bbox);
-          // let x1 = bbox.x;
-          // let x2 = bbox.x + bbox.width;
-          // let translate = 'translate(' + delta[Math.round(x1)] + ',0)';
-          // let scale = 'scale(' + delta[Math.round(x2 - x1)] + ',1)';
-          // item.setAttribute('transform', translate + ' ' + scale);
-
-
-          let segList = item.pathSegList;
-          if (segList) {
-            let n = segList.numberOfItems;
-            let ledgerLines = item.closest('.ledgerLines');
-            if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
-              // console.info('shiftElements ledgerLines: ', ledgerLines);
-              // console.info('segList x: ' + segList[0].x + '/' + segList[1].x);
-              // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
-              let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
-              // console.info('x=' + x);
-              translate(item, delta[x]);
-            } else {
-              for (let i = 0; i < n; i++) {
-                var segment = segList.getItem(i);
-                segment.x += delta[Math.round(Math.max(0, segment.x))];
-                if (segment.x1)
-                  segment.x1 += delta[Math.round(Math.max(0, segment.x1))];
-                if (segment.x2)
-                  segment.x2 += delta[Math.round(Math.max(0, segment.x2))];
-              }
-            }
-          } else {
-            console.log('Path does not have pathSegList: ', item);
-          }
-        } else if (item.nodeName == 'g') { // note / chord / arpeg
-          let x = getX(item);
-          let d = delta[Math.round(x)];
-          if (item.className.baseVal == "arpeg") {
-            console.info('shiftElements ARPEG: ', item);
-            addTranslation(item, d);
-          } else {
-            translate(item, d); // translate in combination w\ existing translte
-            // if within chord & first note in chord, translate stem/artic too
-            let chord = item.closest('.chord');
-            if (chord && chord.querySelector('.note').getAttribute('id') ==
-              item.getAttribute('id')) {
-              let stem = chord.querySelector('.stem');
-              if (stem) translate(stem, d);
-              let artics = chord.querySelectorAll('.artic');
-              if (artics) artics.forEach(item => translate(item, d));
-              let dots = chord.querySelectorAll('.dots');
-              if (dots) dots.forEach(item => translate(item, d));
-            }
-          }
-          // console.info('transform on ', item);
-        } else { // rect, use, text, ellipse, circle
-          if (!item.closest('.chord') && !item.closest('.note')) { // not within
-            let attribute = 'x';
-            if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
-              attribute = 'cx';
-            let x = parseFloat(item.getAttribute(attribute));
-            let d = 0;
-            d = delta[Math.round(x)];
-            item.setAttribute(attribute, x + d);
-          }
-        }
-      });
-    }
-
-    function adjustIndividualNotes() {
-      scoreWarper.maps.forEach((item, i) => {
-        if (i >= getFirstOnsetIdx(scoreWarper.maps) && i <= getLastOnsetIdx(scoreWarper.maps)) {
-          let onsetSVGx = time2svg(item.obs_mean_onset);
-          item.xml_id.forEach(id => {
-            let note = scoreWarper.svgObj.querySelector(`[*|id="${id}"]`);
-            if (note) {
-              let use = note.querySelector('g.notehead use');
-              let noteX = parseFloat(use.getAttribute('x'));
-              translate(note, onsetSVGx - noteX, false);
-            }
-          });
-        }
-      });
-    }
-
-    function createWarpingFunction(noteSVGXs, svgViewBox) {
-      let width = svgViewBox[2] - svgViewBox[0];
-      // console.info('onsetSVGXs, ', onsetSVGXs);
-      // console.info('noteSVGXs, ', noteSVGXs);
-      // console.info('noteXs, ', noteXs);
-      // console.info('svgViewBox, ', svgViewBox);
-      // console.info('warpFunc width: ', width);
-      let warpFunc = [];
-      let [j, x0, v1, v2, ip, lastIp] = [0, 0, 0, 0, 0, 0];
-      for (let x = 0; x < width; x++) {
-        if (noteSVGXs[j] <= x) {
-          x0 = x;
-          j++;
-        }
-        if (j <= 0 || j >= width) ip = lastIp;
-        else {
-          v1 = onsetSVGXs[j - 1] - noteSVGXs[j - 1]; // onset minus note
-          v2 = onsetSVGXs[Math.min(j, onsetSVGXs.length - 1)] -
-            noteSVGXs[Math.min(j, noteSVGXs.length - 1)];
-          ip = lerp(v1, v2, (x - x0) / (noteSVGXs[j] - noteSVGXs[j - 1]));
-          if (!ip) ip = lastIp;
-        }
-        warpFunc.push(ip);
-        lastIp = ip;
-        // console.info('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
-      };
-      return warpFunc;
-    }
-
-    function lerp(v0, v1, t) { // linear interpolation; t from 0 to lgt - 1
-      return (1 - t) * v0 + t * v1;
-    }
-
-    // translate item object, checking if a translate is already there.
-    function translate(item, delta, useExisting = true) {
-      let existingX = 0;
-      let trList = item.transform.baseVal; // SVGTransformList
-      if (trList && trList.length > 0) { // if transform exists
-        // console.info('SVGTransformList EXISTING: ', trList);
-        let index = -1;
-        for (currTrans of trList) {
-          index++;
-          // trList.forEach((currTrans, i) => {
-          if (currTrans.type == SVGTransform.SVG_TRANSFORM_TRANSLATE) {
-            // console.info('TRANSLATION FOUND: ', item);
-            if (useExisting) existingX = currTrans.matrix.e;
-            break;
-          }
-        }
-        trList.getItem(index).setTranslate(existingX + delta, 0);
-      } else { // create new transform
-        // console.info('SVGTransformList EMPTY: ', trList);
-        // if (useExisting) {
-        //   existingX = trList.getItem(0).matrix.e;
-        //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
-        // }
-        let translate = scoreWarper.svgObj.createSVGTransform();
-        translate.setTranslate(existingX + delta, 0);
-        item.transform.baseVal.appendItem(translate);
-      }
-    }
-
-    function addTranslation(item, delta) {
-      let newTranslate = scoreWarper.svgObj.createSVGTransform();
-      newTranslate.setTranslate(delta, 0);
-      item.transform.baseVal.insertItemBefore(newTranslate, 0);
-    }
-
-    /**
-     * Shifts a beam horizontally by modifying the x coordinates of the polygon
-     * @param {Element} beam - the beam element
-     * @param {Element} polygon - the polygon element
-     * @param {Array} delta - the warping function
-     */
-    function shiftBeam(beam, polygon, delta) {
-      let stems = beam.querySelectorAll('.stem > path');
-      let px1 = polygon.points[0].x;
-      let px2 = polygon.points[1].x;
-      // console.info('beam: ', beam);
-      // console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
-      let diffs1 = [];
-      let diffs2 = [];
-      stems.forEach((item) => {
-        diffs1.push(Math.abs(item.getAttribute('x') - px1));
-        diffs2.push(Math.abs(item.getAttribute('x') - px2));
-      });
-      // console.info('diffs: ', diffs1, diffs2);
-      let i1 = indexOfMin(diffs1);
-      let i2 = indexOfMin(diffs2);
-      if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
-        if (diffs1[i1] <= diffs2[i2])
-          i2 = indexOfMin(diffs2, i2);
-        else
-          i1 = indexOfMin(diffs1, i1);
-      }
-      let n1 = stems[i1].closest('.note');
-      if (!n1) n1 = stems[i1].closest('.chord');
-      x1 = n1.querySelector('.notehead>use').getAttribute('x');
-      let n2 = stems[i2].closest('.note');
-      if (!n2) n2 = stems[i2].closest('.chord');
-      x2 = n2.querySelector('.notehead>use').getAttribute('x');
-
-      for (let m = 0; m < polygon.points.numberOfItems; m++) {
-        var mySVGPoint = scoreWarper.svgObj.createSVGPoint();
-        let x = polygon.points.getItem(m).x;
-        if (m == 0 || m == 3)
-          mySVGPoint.x = x + delta[Math.round(x1)];
-        else
-          mySVGPoint.x = x + delta[Math.round(x2)];
-        mySVGPoint.y = polygon.points.getItem(m).y;
-        polygon.points.replaceItem(mySVGPoint, m);
-      }
-    }
 
     // Create SVG for score time plotting
     function createScoreTimeSVG(width, height,) {
@@ -656,53 +360,27 @@
       node.appendChild(g);
       let tickIncr = 1; // seconds
       let numbIncr = 10; // seconds
-      let lastTick = Math.ceil(tmx / numbIncr) * numbIncr;
+      let lastTick = Math.ceil(scoreWarper.tmx / numbIncr) * numbIncr;
       let s, s2;
       // draw tick lines and horizontal axis and label
       for (let t = 0; t <= lastTick; t += tickIncr) {
-        (toScreen) ? s = time2screen(t) : s = time2svg(t);
+        (toScreen) ? s = scoreWarper.time2screen(t) : s = scoreWarper.time2svg(t);
         if (Math.round(t / numbIncr) == t / numbIncr)
           addLine(g, s, s, y, y + 4, color, 1); // longer tick line
         else
           addLine(g, s, s, y, y + 2, color, 1); // short tick line
         if (t == 0) { // draw horizontal axis and axis label
-          (toScreen) ? s2 = time2screen(lastTick) : time2svg(lastTick);
+          (toScreen) ? s2 = scoreWarper.time2screen(lastTick) : scoreWarper.time2svg(lastTick);
           addLine(g, s, s2, y, y, color, 1);
           addText(g, 'Time (s)', 1, y - 4, "left", color);
         }
       }
       // draw tick label numbers
       for (let t = 0; t <= lastTick; t += numbIncr) {
-        (toScreen) ? s = time2screen(t) : s = time2svg(t);
+        (toScreen) ? s = scoreWarper.time2screen(t) : s = scoreWarper.time2svg(t);
         addText(g, t, s, y + 13, 'middle', color);
       }
     } // drawTimeAxis()
-
-    // convert time in seconds to screen coordinate x values
-    function time2screen(t) {
-      return (t - tmn) / (tmx - tmn) * (lstX - fstX) + fstX;
-    }
-
-    // convert time in seconds to svg x coordinates inside pageMargin
-    function time2svg(t) {
-      return (t - tmn) / (tmx - tmn) *
-        (noteSVGXs[noteSVGXs.length - 1] - noteSVGXs[0]) + noteSVGXs[0];
-    }
-
-    // convert svg x coordinates inside pageMargin to screen coordinates
-    function svg2screen(x) {
-      let newX = (x + scoreWarper.pageMarginX) * scoreWarper.svgWidth;
-      let viewBoxWidth = scoreWarper.svgViewBox[2] - scoreWarper.svgViewBox[0];
-      return newX / viewBoxWidth;
-    }
-
-    function indexOfMin(a, notThis = -1) {
-      let lowest = 0;
-      a.forEach((item, i) => {
-        if (item < a[lowest] && i != notThis) lowest = i;
-      });
-      return lowest;
-    }
 
     function updateMeiFile(fileName = "") {
       meiFileName = fileName;

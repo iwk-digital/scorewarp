@@ -3,26 +3,34 @@
  * @version: 1.0.0
  * Warps an score SVG notation file engraved by Verovio to a given time warping function. 
  * The time warping function is given as a list of time points and corresponding time warping factors.
- */
-
-// TODO: next: move loadPerformanceTiming() to this file
-
-
-class ScoreWarper {
+*/class ScoreWarper {
 
     constructor(svgObject = undefined, maps = undefined) {
-        this._svgObj = svgObject; // store the original SVG object
-        this._warpedSvgObj = { ...svgObject };
-        this._timeWarpingFunction = undefined; // store the time warping function
+        this._svgObj = svgObject; // the SVG element
         this._maps = maps; // store the maps file content
-        this.calculateScoreCoordinates();
-    }; // constructor()
+        if (maps !== undefined) {
+            this.loadMaps(maps);
+        }
+        this.init();
+    } // constructor()
 
+    //#region Control Methods
 
     /**
      * Calculates the SVG coordinates of the score. Called only once when the object is created.
      */
-    calculateScoreCoordinates() {
+    init() {
+        this._noteXs = []; // x values of notes on screen
+        this._noteSVGXs = []; // x values of notes in SVG
+        this._onsetSVGXs = []; // SVG x values of onset times
+        this._elementList; // a nodeList of elements that need to be warped   }; // constructor()
+        this._timeWarpingFunction; // store the time warping function
+
+        this._fstX = 0; // first note screen x
+        this._lstX = 0; // last note screen x
+        this._tmn = 0; // global min onset time
+        this._tmx = 0; // global max onset time
+
         this._svgWidth = parseFloat(this._svgObj.getAttribute('width'));
         this._svgHeight = parseFloat(this._svgObj.getAttribute('height'));
         this._svgViewBox = this._svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
@@ -35,16 +43,145 @@ class ScoreWarper {
         console.info('svgObj transform: ', pageMarginElement.transform);
         console.info('svgObj transform bsVl: ', transformations.getItem(0));
         this._pageMarginX = transformations.getItem(0).matrix.e;
-    } // calculateScoreCoordinates()
+    } // init()
+
+    /**
+     * Scans maps file content and calculates the coordinates for 
+     * time, screen, and SVG. To be called, when new maps file content is loaded.
+     * @param {Object} maps 
+     */
+    loadMaps(maps) {
+        // determine global min and max onset times from maps object
+        this._tmn = maps[this.firstOnsetIdx(maps)].obs_mean_onset;
+        this._tmx = maps[this.lastOnsetIdx(maps)].obs_mean_onset;
+        console.info('ScoreWarper tmn/tmx: ' + this._tmn + '/' + this._tmx);
+
+        // determine global min and max screen x values of notes
+        let id1 = maps[this.firstOnsetIdx(maps)].xml_id[0];
+        let el1 = this._svgObj.querySelector(`[*|id="${id1}"] use[x]`);
+        this._fstX = this.svg2screen(parseFloat(el1.getAttribute('x')));;
+
+        let id2 = maps[this.lastOnsetIdx(maps)].xml_id[0];
+        let el2 = this._svgObj.querySelector(`[*|id="${id2}"] use[x]`);
+        this._lstX = this.svg2screen(parseFloat(el2.getAttribute('x')));
+        console.info('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
+
+        // calculate score note coordinates
+        this._noteXs = [];    // x values of notes on screen
+        this._noteSVGXs = []; // x values of notes in SVG
+        maps.forEach((item, i) => {
+            if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
+                let note = this._svgObj.querySelector('[*|id="' + item.xml_id[0] + '"]');
+                if (note) {
+                    let use = note.querySelector('g.notehead use');
+                    let noteX = parseFloat(use.getAttribute('x'));
+                    // console.info(i + '; noteSVGX: ', noteX + ', note: ', note);
+                    this._noteSVGXs.push(noteX); // pure SVG x values (without page-margin)
+                    this._noteXs.push(this.svg2screen(noteX));
+                } else {
+                    console.info(i + '; note: NOT FOUND');
+                }
+            }
+        });
+
+        this._onsetSVGXs = []; // SVG x values of onset times
+        // calculate noteSVGs and plot onset info to ptObj
+        maps.forEach((item, i) => {
+            if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
+                let t = item.obs_mean_onset;
+                // save onset time data in SVG coordinates
+                this._onsetSVGXs.push(this.time2svg(t));
+            }
+        });
+    } // loadMaps()
+
+    /**
+     * Warps the score SVG object to the given time warping function
+     * @param {Object} maps (optional) maps file content, if empty, 
+     * the current maps file content is used
+     */
+    warp(maps = null) {
+        if (maps !== null) {
+            this.loadMaps(maps);
+        }
+
+        // list all warpable elements of score
+        elementList = this._svgObj
+            .querySelector('.page-margin')
+            .querySelectorAll(
+                'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
+        // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
+        // ellipse, circle, path');
+        console.info('ScoreWarper elementList: ', elementList);
+
+        let warpFunc = this.computeWarpingArray();
+
+        this.#shiftElements(elementList, warpFunc);
+    } // warp()
+
+
+    /**
+     * Adjusts individual notes in a chord. To be run after calling warp().
+     */
+    warpIndividualNotes() {
+        this._maps.forEach((item, i) => {
+            if (i >= this.firstOnsetIdx(this._maps) && i <= this.lastOnsetIdx(this._maps)) {
+                let onsetSVGx = this.time2svg(item.obs_mean_onset);
+                item.xml_id.forEach(id => {
+                    let note = this._svgObj.querySelector(`[*|id="${id}"]`);
+                    if (note) {
+                        let use = note.querySelector('g.notehead use');
+                        let noteX = parseFloat(use.getAttribute('x'));
+                        this.#translate(note, onsetSVGx - noteX, false);
+                    }
+                });
+            }
+        });
+    } // adjustIndividualNotes()
 
 
     //#region Getters
+
+    /**
+     * Get fstX (first note screen x) in the maps file
+     */
+    get fstX() {
+        return this._fstX;
+    }
+
+    /** 
+     * Get lstX (last note screen x) in the maps file
+     */
+    get lstX() {
+        return this._lstX;
+    }
 
     /**
      * Get the maps file content
      */
     get maps() {
         return this._maps;
+    }
+
+    /**
+     * Get noteXs (x values of notes on screen)
+     */
+    get noteXs() {
+        return this._noteXs;
+    }
+
+    /**
+     * Get noteSVGXs (x values of notes in SVG)
+     */
+    get noteSVGXs() {
+        return this._noteSVGXs;
+    }
+
+    /**
+     * Get onsetSVGXs (SVG x values of onset times)
+     */
+    get onsetSVGXs() {
+        return this._onsetSVGXs;
     }
 
     /**
@@ -90,25 +227,368 @@ class ScoreWarper {
     }
 
     /**
-    * Get the warped SVG object
-    */
-    get warpedSvgObj() {
-        return this._warpedSvgObj;
+     * Get tmn (global min onset time) in the maps file
+     */
+    get tmn() {
+        return this._tmn;
+    }
+
+    /**
+     * Get tmx (global max onset time) in the maps file
+     */
+    get tmx() {
+        return this._tmx;
     }
 
     //#region Setters
 
     /**
-     * Set the maps file content
+     * Set svgObj (the SVG element)
+     */
+    set svgObj(svgObj) {
+        this._svgObj = svgObj;
+        this.init();
+    }
+
+    /**
+     * Set the maps file content and compute coordinates for time, screen, and SVG
      */
     set maps(maps) {
+        this.loadMaps(maps);
         this._maps = maps;
-    }
+    } // set maps()
 
     /**
      * Set the time warping function
      */
     set timeWarpingFunction(timeWarpingFunction) {
         this._timeWarpingFunction = timeWarpingFunction;
+    }
+
+    //#endregion Setters
+
+
+    //#region Helper Methods
+
+
+    /**
+     * Converts time in seconds to screen coordinate x values
+     * @param {Number} t time in secods
+     */
+    time2screen(t) {
+        // return (t - this._tmn) / (this._tmx - this._tmn) * (this._lstX - this._fstX) + this._fstX;
+        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
+        let xRatio = this._lstX - this._fstX;
+        return timeRatio * xRatio + this._fstX;
+    } // time2screen()
+
+    /**
+     * Converts time in seconds to svg x coordinates inside pageMargin
+     * @param {Number} t 
+     * @returns 
+     */
+    time2svg(t) {
+        // return (t - this._tmn) / (this._tmx - this._tmn) *
+        //     (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]) + this._noteSVGXs[0];
+        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn)
+        let svgRatio = (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]);
+        return timeRatio * svgRatio + this._noteSVGXs[0];
+    } // time2svg()
+
+    /**
+     * Converts SVG x coordinates into screen x coordinates
+     * @param {Number} x 
+     * @returns 
+     */
+    svg2screen(x) {
+        let newX = (x + this._pageMarginX) * this._svgWidth;
+        let viewBoxWidth = this._svgViewBox[2] - this._svgViewBox[0];
+        return newX / viewBoxWidth;
+    } // svg2screen()
+
+    /**
+     * Returns first onset index in the maps file
+     * @param {Object} maps 
+     * @returns 
+     */
+    firstOnsetIdx(maps) {
+        let i = 0;
+        while (maps[i].obs_mean_onset < 0) i++;
+        // console.info('getFirstOnsetIdx i: ' + i);
+        return i;
+    } // firstOnsetIdx()
+
+    /**
+     * Returns last onset index in the maps file
+     * @param {Object} maps 
+     * @returns 
+     */
+    lastOnsetIdx(maps) {
+        let i = maps.length - 1;
+        while (maps[i].xml_id[0].includes('trompa')) i--;
+        // console.info('getLastOnsetIdx i: ' + i);
+        return i;
+    } // lastOnsetIdx()
+
+    /**
+     * Computes the warping function for the note SVG x coordinates
+     * @param {Array} noteSVGXs 
+     * @param {Array} svgViewBox 
+     * @returns {Array} of warping function values
+     */
+    computeWarpingArray() {
+        let width = this._svgViewBox[2] - this._svgViewBox[0];
+        // console.info('onsetSVGXs, ', onsetSVGXs);
+        // console.info('noteSVGXs, ', noteSVGXs);
+        // console.info('noteXs, ', noteXs);
+        // console.info('svgViewBox, ', svgViewBox);
+        // console.info('warpFunc width: ', width);
+        let warpArr = [];
+        let [j, x0, v1, v2, ip, lastIp] = [0, 0, 0, 0, 0, 0];
+        for (let x = 0; x < width; x++) {
+            if (this._noteSVGXs[j] <= x) {
+                x0 = x;
+                j++;
+            }
+            if (j <= 0 || j >= width) ip = lastIp;
+            else {
+                v1 = this._onsetSVGXs[j - 1] - this._noteSVGXs[j - 1]; // onset minus note
+                v2 = this._onsetSVGXs[Math.min(j, this._onsetSVGXs.length - 1)] -
+                    this._noteSVGXs[Math.min(j, this._noteSVGXs.length - 1)];
+                ip = lerp(v1, v2, (x - x0) / (this._noteSVGXs[j] - this._noteSVGXs[j - 1]));
+                if (!ip) ip = lastIp;
+            }
+            warpArr.push(ip);
+            lastIp = ip;
+            // console.info('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
+        };
+        return warpArr;
+
+        function lerp(v0, v1, t) { // linear interpolation; t from 0 to lgt - 1
+            return (1 - t) * v0 + t * v1;
+        }
+    } // computeWarpingArray()
+
+    //#region Shifting Methods
+
+    /**
+     * Shifts elements in elementList horizontally by modifying all x coordinates using
+     * the warpingFunction delta
+     * @param {NodeList} elementList 
+     * @param {Array} warpingFunction 
+     */
+    #shiftElements(elementList, warpingFunction) {
+        elementList.forEach(item => {
+            // console.info('Shifting ', item);
+            if (item.nodeName == 'polygon') { // beam,
+                let pointsList = item.points;
+                let n = pointsList.numberOfItems;
+                let beam = item.closest('.beam');
+                if (beam && n == 4) {
+                    // shift beam with 4 points
+                    this.#shiftBeam(beam, item, warpingFunction);
+                } else {
+                    console.info('ShiftPolygon ', item);
+                    console.info('with ' + n + ' points: ', item.points);
+                    for (let m = 0; m < n; m++) {
+                        var mySVGPoint = this._svgObj.createSVGPoint();
+                        let x = pointsList.getItem(m).x;
+                        mySVGPoint.x = x + warpingFunction[Math.round(x)];
+                        mySVGPoint.y = pointsList.getItem(m).y;
+                        pointsList.replaceItem(mySVGPoint, m);
+                    }
+                }
+            } else if (item.nodeName == 'path') {
+                // let bbox = item.getBBox();
+                // console.log('Path BBox: ', bbox);
+                // let x1 = bbox.x;
+                // let x2 = bbox.x + bbox.width;
+                // let translate = 'translate(' + delta[Math.round(x1)] + ',0)';
+                // let scale = 'scale(' + delta[Math.round(x2 - x1)] + ',1)';
+                // item.setAttribute('transform', translate + ' ' + scale);
+
+
+                let segList = item.pathSegList;
+                if (segList) {
+                    let n = segList.numberOfItems;
+                    let ledgerLines = item.closest('.ledgerLines');
+                    if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
+                        // console.info('shiftElements ledgerLines: ', ledgerLines);
+                        // console.info('segList x: ' + segList[0].x + '/' + segList[1].x);
+                        // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
+                        let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
+                        // console.info('x=' + x);
+                        this.#translate(item, warpingFunction[x]);
+                    } else {
+                        for (let i = 0; i < n; i++) {
+                            var segment = segList.getItem(i);
+                            segment.x += warpingFunction[Math.round(Math.max(0, segment.x))];
+                            if (segment.x1)
+                                segment.x1 += warpingFunction[Math.round(Math.max(0, segment.x1))];
+                            if (segment.x2)
+                                segment.x2 += warpingFunction[Math.round(Math.max(0, segment.x2))];
+                        }
+                    }
+                } else {
+                    console.log('Path does not have pathSegList: ', item);
+                }
+            } else if (item.nodeName == 'g') { // note / chord / arpeg
+                let x = this.getX(item);
+                let d = warpingFunction[Math.round(x)];
+                if (item.className.baseVal == "arpeg") {
+                    console.info('shiftElements ARPEG: ', item);
+                    this.#addTranslation(item, d);
+                } else {
+                    this.#translate(item, d); // translate in combination w\ existing translte
+                    // if within chord & first note in chord, translate stem/artic too
+                    let chord = item.closest('.chord');
+                    if (chord && chord.querySelector('.note').getAttribute('id') ==
+                        item.getAttribute('id')) {
+                        let stem = chord.querySelector('.stem');
+                        if (stem) this.#translate(stem, d);
+                        let artics = chord.querySelectorAll('.artic');
+                        if (artics) artics.forEach(item => this.#translate(item, d));
+                        let dots = chord.querySelectorAll('.dots');
+                        if (dots) dots.forEach(item => this.#translate(item, d));
+                    }
+                }
+                // console.info('transform on ', item);
+            } else { // rect, use, text, ellipse, circle
+                if (!item.closest('.chord') && !item.closest('.note')) { // not within
+                    let attribute = 'x';
+                    if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
+                        attribute = 'cx';
+                    let x = parseFloat(item.getAttribute(attribute));
+                    let d = 0;
+                    d = warpingFunction[Math.round(x)];
+                    item.setAttribute(attribute, x + d);
+                }
+            }
+        });
+    } // shiftElements()
+
+    /**
+    * Shifts a beam horizontally by modifying the x coordinates of the polygon
+    * @param {Element} beam - the beam element
+    * @param {Element} polygon - the polygon element
+    * @param {Array} delta - the warping function
+    */
+    #shiftBeam(beam, polygon, delta) {
+        let stems = beam.querySelectorAll('.stem > path');
+        let px1 = polygon.points[0].x;
+        let px2 = polygon.points[1].x;
+        // console.info('beam: ', beam);
+        // console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
+        let diffs1 = [];
+        let diffs2 = [];
+        stems.forEach((item) => {
+            diffs1.push(Math.abs(item.getAttribute('x') - px1));
+            diffs2.push(Math.abs(item.getAttribute('x') - px2));
+        });
+        // console.info('diffs: ', diffs1, diffs2);
+        let i1 = this.#indexOfMin(diffs1);
+        let i2 = this.#indexOfMin(diffs2);
+        if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
+            if (diffs1[i1] <= diffs2[i2])
+                i2 = this.#indexOfMin(diffs2, i2);
+            else
+                i1 = this.#indexOfMin(diffs1, i1);
+        }
+        let n1 = stems[i1].closest('.note');
+        if (!n1) n1 = stems[i1].closest('.chord');
+        let x1 = n1.querySelector('.notehead>use').getAttribute('x');
+        let n2 = stems[i2].closest('.note');
+        if (!n2) n2 = stems[i2].closest('.chord');
+        let x2 = n2.querySelector('.notehead>use').getAttribute('x');
+
+        for (let m = 0; m < polygon.points.numberOfItems; m++) {
+            var mySVGPoint = this._svgObj.createSVGPoint();
+            let x = polygon.points.getItem(m).x;
+            if (m == 0 || m == 3)
+                mySVGPoint.x = x + delta[Math.round(x1)];
+            else
+                mySVGPoint.x = x + delta[Math.round(x2)];
+            mySVGPoint.y = polygon.points.getItem(m).y;
+            polygon.points.replaceItem(mySVGPoint, m);
+        }
+    } // shiftBeam()
+
+    /**
+     * Translates item object, checking if a translate is already there.
+     * @param {Element} item 
+     * @param {Number} delta 
+     * @param {Boolean} useExisting 
+     */
+    #translate(item, delta, useExisting = true) {
+        let existingX = 0;
+        let trList = item.transform.baseVal; // SVGTransformList
+        if (trList && trList.length > 0) { // if transform exists
+            // console.info('SVGTransformList EXISTING: ', trList);
+            let index = -1;
+            for (let currTrans of trList) {
+                index++;
+                // trList.forEach((currTrans, i) => {
+                if (currTrans.type == SVGTransform.SVG_TRANSFORM_TRANSLATE) {
+                    // console.info('TRANSLATION FOUND: ', item);
+                    if (useExisting) existingX = currTrans.matrix.e;
+                    break;
+                }
+            }
+            trList.getItem(index).setTranslate(existingX + delta, 0);
+        } else { // create new transform
+            // console.info('SVGTransformList EMPTY: ', trList);
+            // if (useExisting) {
+            //   existingX = trList.getItem(0).matrix.e;
+            //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
+            // }
+            let translate = this._svgObj.createSVGTransform();
+            translate.setTranslate(existingX + delta, 0);
+            item.transform.baseVal.appendItem(translate);
+        }
+    } // translate()
+
+    /**
+     * Add a translation to an item object
+     * @param {Element} item 
+     * @param {Number} delta 
+     */
+    #addTranslation(item, delta) {
+        let newTranslate = this._svgObj.createSVGTransform();
+        newTranslate.setTranslate(delta, 0);
+        item.transform.baseVal.insertItemBefore(newTranslate, 0);
+    } // addTranslation()
+
+
+    /**
+     * Returns the x coordinate of an element
+     * @param {Element} el
+     * @returns {Number} x coordinate
+     */
+    getX(el) {
+        switch (el.nodeName) {
+            case 'polygon':
+                return el.points.getItem(0).x;
+            case 'path':
+                return el.pathSegList.getItem(0).x;
+            case 'ellipse' || 'circle':
+                return parseFloat(el.getAttribute('cx'));
+            case 'rect' || 'use' || 'text':
+                return parseFloat(el.getAttribute('x'));
+            case 'g': // for .chord, .note
+                let className = el.getAttribute('class');
+                if (className && (className == 'chord' || className == 'note'))
+                    return parseFloat(
+                        el.querySelector('.notehead>use[x]').getAttribute('x'));
+                else
+                    return parseFloat(el.querySelector('use[x]').getAttribute('x'));
+        }
+    } // getX()
+
+    #indexOfMin(a, notThis = -1) {
+        let lowest = 0;
+        a.forEach((item, i) => {
+            if (item < a[lowest] && i != notThis) lowest = i;
+        });
+        return lowest;
     }
 } // ScoreWarper class
