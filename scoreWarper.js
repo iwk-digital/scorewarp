@@ -3,6 +3,10 @@
  * @version: 1.0.0
  * Warps an score SVG notation file engraved by Verovio to a given time warping function. 
  * The time warping function is given as a list of time points and corresponding time warping factors.
+ * 
+ * TODO: Handle beams that are not connects.
+ * TODO: Why are beams sometimes good, sometimes bad?
+ * TODO: .tupletNum 'g use' not handled
 */class ScoreWarper {
 
     constructor(svgObject = undefined, maps = undefined) {
@@ -37,11 +41,11 @@
         this._svgViewBox = this._svgViewBox.split(' ').map(Number);
         let pageMarginElement = this._svgObj.querySelector('.page-margin');
         let transformations = pageMarginElement.transform.baseVal;
-        console.info('svgObj: ', this._svgObj);
-        console.info('svgObj width: ', this._svgWidth);
-        console.info('svgObj viewBox: ', this._svgViewBox);
-        console.info('svgObj transform: ', pageMarginElement.transform);
-        console.info('svgObj transform bsVl: ', transformations.getItem(0));
+        console.debug('svgObj: ', this._svgObj);
+        console.debug('svgObj width: ', this._svgWidth);
+        console.debug('svgObj viewBox: ', this._svgViewBox);
+        console.debug('svgObj transform: ', pageMarginElement.transform);
+        console.debug('svgObj transform bsVl: ', transformations.getItem(0));
         this._pageMarginX = transformations.getItem(0).matrix.e;
     } // init()
 
@@ -54,7 +58,7 @@
         // determine global min and max onset times from maps object
         this._tmn = maps[this.firstOnsetIdx(maps)].obs_mean_onset;
         this._tmx = maps[this.lastOnsetIdx(maps)].obs_mean_onset;
-        console.info('ScoreWarper tmn/tmx: ' + this._tmn + '/' + this._tmx);
+        console.debug('ScoreWarper tmn/tmx: ' + this._tmn + '/' + this._tmx);
 
         // determine global min and max screen x values of notes
         let id1 = maps[this.firstOnsetIdx(maps)].xml_id[0];
@@ -64,7 +68,7 @@
         let id2 = maps[this.lastOnsetIdx(maps)].xml_id[0];
         let el2 = this._svgObj.querySelector(`[*|id="${id2}"] use[x]`);
         this._lstX = this.svg2screen(parseFloat(el2.getAttribute('x')));
-        console.info('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
+        console.debug('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
 
         // calculate score note coordinates
         this._noteXs = [];    // x values of notes on screen
@@ -73,19 +77,22 @@
             if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
                 let note = this._svgObj.querySelector('[*|id="' + item.xml_id[0] + '"]');
                 if (note) {
-                    let use = note.querySelector('g.notehead use');
-                    let noteX = parseFloat(use.getAttribute('x'));
-                    // console.info(i + '; noteSVGX: ', noteX + ', note: ', note);
+                    // take center of notes as x value
+                    let bbox = note.querySelector('.notehead use')?.getBBox();
+                    let noteX = bbox.x + bbox.width / 2;
+                    if (!noteX) {
+                        console.warn('Note without notehead: ', note);
+                    }
                     this._noteSVGXs.push(noteX); // pure SVG x values (without page-margin)
                     this._noteXs.push(this.svg2screen(noteX));
                 } else {
-                    console.info(i + '; note: NOT FOUND');
+                    console.debug(i + '; note: NOT FOUND');
                 }
             }
         });
 
+        // calculate noteSVGs with mean onset times per event (as in maps object)
         this._onsetSVGXs = []; // SVG x values of onset times
-        // calculate noteSVGs and plot onset info to ptObj
         maps.forEach((item, i) => {
             if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
                 let t = item.obs_mean_onset;
@@ -105,18 +112,24 @@
             this.loadMaps(maps);
         }
 
-        // list all warpable elements of score
-        elementList = this._svgObj
-            .querySelector('.page-margin')
-            .querySelectorAll(
-                'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
-        // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
-        // ellipse, circle, path');
-        console.info('ScoreWarper elementList: ', elementList);
+        // selector for SVG elements that need to be warped
+        let listOfSelectors = [
+            'g.note,g.rest,g.arpeg',
+            // ':not(g.notehead):not(g.arpeg)>use[x]',
+            'rect[x]',
+            'text[x]',
+            'line',
+            'polygon', // for beams
+            'ellipse', // for dots
+            'circle', // for what?
+            'path', // for slur, barline, ledgerLines (stem handled by note, staff lines)
+        ];
 
+        // calculate warping function
         let warpFunc = this.computeWarpingArray();
 
-        this.#shiftElements(elementList, warpFunc);
+        // shift elements in elementList
+        this.#shiftElements(listOfSelectors, warpFunc);
     } // warp()
 
 
@@ -314,7 +327,7 @@
     firstOnsetIdx(maps) {
         let i = 0;
         while (maps[i].obs_mean_onset < 0) i++;
-        // console.info('getFirstOnsetIdx i: ' + i);
+        // console.debug('getFirstOnsetIdx i: ' + i);
         return i;
     } // firstOnsetIdx()
 
@@ -326,41 +339,44 @@
     lastOnsetIdx(maps) {
         let i = maps.length - 1;
         while (maps[i].xml_id[0].includes('trompa')) i--;
-        // console.info('getLastOnsetIdx i: ' + i);
+        // console.debug('getLastOnsetIdx i: ' + i);
         return i;
     } // lastOnsetIdx()
 
     /**
-     * Computes the warping function for the note SVG x coordinates
-     * @param {Array} noteSVGXs 
-     * @param {Array} svgViewBox 
+     * Computes the warping function for the note SVG x coordinates,
+     * based on the  onset SVG x coordinates and the note SVG x coordinates,
+     * stored in the object, and returns an array of warping function values.
+     * 
      * @returns {Array} of warping function values
      */
     computeWarpingArray() {
         let width = this._svgViewBox[2] - this._svgViewBox[0];
-        // console.info('onsetSVGXs, ', onsetSVGXs);
-        // console.info('noteSVGXs, ', noteSVGXs);
-        // console.info('noteXs, ', noteXs);
-        // console.info('svgViewBox, ', svgViewBox);
-        // console.info('warpFunc width: ', width);
+        // console.debug('onsetSVGXs, ', onsetSVGXs);
+        // console.debug('noteSVGXs, ', noteSVGXs);
+        // console.debug('noteXs, ', noteXs);
+        // console.debug('svgViewBox, ', svgViewBox);
+        // console.debug('warpFunc width: ', width);
         let warpArr = [];
-        let [j, x0, v1, v2, ip, lastIp] = [0, 0, 0, 0, 0, 0];
-        for (let x = 0; x < width; x++) {
-            if (this._noteSVGXs[j] <= x) {
-                x0 = x;
-                j++;
+        let [j, lastX, lastDiff, currDiff, ip, lastIp] = [0, 0, 0, 0, 0, 0];
+        // go through all x values of the SVG and compute an interpolation value ip for each x
+        for (let currX = 0; currX < width; currX++) {
+            if (this._noteSVGXs[j] <= currX) {
+                lastX = currX;
+                j++; // increment j, index into noteSVGXs
             }
-            if (j <= 0 || j >= width) ip = lastIp;
-            else {
-                v1 = this._onsetSVGXs[j - 1] - this._noteSVGXs[j - 1]; // onset minus note
-                v2 = this._onsetSVGXs[Math.min(j, this._onsetSVGXs.length - 1)] -
-                    this._noteSVGXs[Math.min(j, this._noteSVGXs.length - 1)];
-                ip = lerp(v1, v2, (x - x0) / (this._noteSVGXs[j] - this._noteSVGXs[j - 1]));
+            if (j <= 0 || j >= width) {
+                ip = lastIp;
+            } else {
+                lastDiff = this._onsetSVGXs[j - 1] - this._noteSVGXs[j - 1]; // last Diff (onset minus note x)
+                currDiff = this._onsetSVGXs[Math.min(j, this._onsetSVGXs.length - 1)] -
+                    this._noteSVGXs[Math.min(j, this._noteSVGXs.length - 1)]; // current Diff (onset minus note x)
+                ip = lerp(lastDiff, currDiff, (currX - lastX) / (this._noteSVGXs[j] - this._noteSVGXs[j - 1]));
                 if (!ip) ip = lastIp;
             }
             warpArr.push(ip);
             lastIp = ip;
-            // console.info('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
+            // console.debug('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
         };
         return warpArr;
 
@@ -372,146 +388,299 @@
     //#region Shifting Methods
 
     /**
-     * Shifts elements in elementList horizontally by modifying all x coordinates using
+     * Shifts elements in selector list horizontally by modifying all x coordinates using
      * the warpingFunction delta
-     * @param {NodeList} elementList 
+     * @param {Array[String]} selectorList 
      * @param {Array} warpingFunction 
      */
-    #shiftElements(elementList, warpingFunction) {
-        elementList.forEach(item => {
-            // console.info('Shifting ', item);
-            if (item.nodeName == 'polygon') { // beam,
-                let pointsList = item.points;
-                let n = pointsList.numberOfItems;
-                let beam = item.closest('.beam');
-                if (beam && n == 4) {
-                    // shift beam with 4 points
-                    this.#shiftBeam(beam, item, warpingFunction);
-                } else {
-                    console.info('ShiftPolygon ', item);
-                    console.info('with ' + n + ' points: ', item.points);
-                    for (let m = 0; m < n; m++) {
-                        var mySVGPoint = this._svgObj.createSVGPoint();
-                        let x = pointsList.getItem(m).x;
-                        mySVGPoint.x = x + warpingFunction[Math.round(x)];
-                        mySVGPoint.y = pointsList.getItem(m).y;
-                        pointsList.replaceItem(mySVGPoint, m);
-                    }
-                }
-            } else if (item.nodeName == 'path') {
-                // let bbox = item.getBBox();
-                // console.log('Path BBox: ', bbox);
-                // let x1 = bbox.x;
-                // let x2 = bbox.x + bbox.width;
-                // let translate = 'translate(' + delta[Math.round(x1)] + ',0)';
-                // let scale = 'scale(' + delta[Math.round(x2 - x1)] + ',1)';
-                // item.setAttribute('transform', translate + ' ' + scale);
+    #shiftElements(selectorList, warpingFunction) {
+        for (let selector of selectorList) {
+            let list = this._svgObj.querySelectorAll(selector);
+            console.debug('XXXXXXX Shifting ' + list.length + ' ' + selector + ' elements.');
+            list.forEach(item => {
 
 
-                let segList = item.pathSegList;
-                if (segList) {
-                    let n = segList.numberOfItems;
-                    let ledgerLines = item.closest('.ledgerLines');
-                    if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
-                        // console.info('shiftElements ledgerLines: ', ledgerLines);
-                        // console.info('segList x: ' + segList[0].x + '/' + segList[1].x);
-                        // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
-                        let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
-                        // console.info('x=' + x);
-                        this.#translate(item, warpingFunction[x]);
+                // note / rest / arpeg
+                if (item.nodeName == 'g') {
+                    let x = item.getBBox().x + item.getBBox().width / 2;
+                    let xShift = warpingFunction[Math.round(x)];
+                    if (item.className.baseVal === 'arpeg') {
+                        console.debug('shiftElements ARPEG: ', item);
+                        this.#addTranslation(item, xShift);
                     } else {
-                        for (let i = 0; i < n; i++) {
-                            var segment = segList.getItem(i);
-                            segment.x += warpingFunction[Math.round(Math.max(0, segment.x))];
-                            if (segment.x1)
-                                segment.x1 += warpingFunction[Math.round(Math.max(0, segment.x1))];
-                            if (segment.x2)
-                                segment.x2 += warpingFunction[Math.round(Math.max(0, segment.x2))];
+                        this.#translate(item, xShift); // translate in combination w\ existing translate
+
+                        // check for ledgerLines    
+                        let ledgerLines = item.closest('.staff')?.querySelectorAll('.ledgerLines > path');
+                        if (ledgerLines) {
+                            console.debug('shiftElements ledgerLines: ', ledgerLines);
+                            ledgerLines.forEach(ledger => {
+                                let boundingBox = ledger.getBBox();
+                                if (boundingBox.x < x && boundingBox.x + boundingBox.width > x &&
+                                    ledger.transform.baseVal.length === 0) {
+                                    this.#addTranslation(ledger, xShift);
+                                }
+                            });
+                        }
+
+                        // if within chord & first note in chord, translate stem/artic too
+                        let chord = item.closest('.chord');
+                        if (chord &&
+                            chord.querySelector('.note').getAttribute('id') === item.getAttribute('id')) {
+                            let stem = chord.querySelector('.stem');
+                            if (stem) this.#translate(stem, xShift);
+                            let artics = chord.querySelectorAll('.artic');
+                            if (artics) artics.forEach(item => this.#translate(item, xShift));
+                            let dots = chord.querySelectorAll('.dots');
+                            if (dots) dots.forEach(item => this.#translate(item, xShift));
                         }
                     }
-                } else {
-                    console.log('Path does not have pathSegList: ', item);
                 }
-            } else if (item.nodeName == 'g') { // note / chord / arpeg
-                let x = this.getX(item);
-                let d = warpingFunction[Math.round(x)];
-                if (item.className.baseVal == "arpeg") {
-                    console.info('shiftElements ARPEG: ', item);
-                    this.#addTranslation(item, d);
-                } else {
-                    this.#translate(item, d); // translate in combination w\ existing translte
-                    // if within chord & first note in chord, translate stem/artic too
-                    let chord = item.closest('.chord');
-                    if (chord && chord.querySelector('.note').getAttribute('id') ==
-                        item.getAttribute('id')) {
-                        let stem = chord.querySelector('.stem');
-                        if (stem) this.#translate(stem, d);
-                        let artics = chord.querySelectorAll('.artic');
-                        if (artics) artics.forEach(item => this.#translate(item, d));
-                        let dots = chord.querySelectorAll('.dots');
-                        if (dots) dots.forEach(item => this.#translate(item, d));
+
+                // slur, barline, ledgerLines, staff lines
+                else if (item.nodeName == 'path' && !item.closest('.note, .chord, .ledgerLines')) {
+                    let bbox = item.getBBox();
+                    console.log('Path BBox(): ', bbox);
+                    let x1 = bbox.x;
+                    let x2 = bbox.x + bbox.width;
+
+                    // compute transform values
+                    let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+                    let xShift2 = warpingFunction[Math.round(x2)];
+
+                    this.#shiftElement(item, x1, x2, xShift1, xShift2);
+                }
+
+                // beam
+                else if (item.nodeName == 'polygon') {
+                    console.debug('BEAM ShiftPolygon ', item);
+                    let leftStem, rightStem;
+                    let boundingBox = item.getBBox();
+                    // look for all stems within the beam
+                    let stems = item.closest('.beam')?.querySelectorAll('.stem');
+                    console.debug('SSSSSSSSS Stems within beam ', stems);
+                    stems.forEach(element => {
+                        let stemX = element.getBBox().x;
+                        let threshold = 12; // SVG px
+                        if (Math.abs(stemX - boundingBox.x) < threshold)
+                            leftStem = element;
+                        else if (Math.abs(stemX - boundingBox.x - boundingBox.width) < threshold) {
+                            rightStem = element;
+                        }
+                    });
+
+                    // if (!leftNote) find alternative notes, if none are found
+
+                    if (leftStem && rightStem) {
+                        let x1 = leftStem.getBBox().x;
+                        let x2 = rightStem.getBBox().x;
+                        let xShift1 = warpingFunction[Math.round(x1)];
+                        let xShift2 = warpingFunction[Math.round(x2)];
+                        this.#shiftElement(item, x1, x2, xShift1, xShift2);
                     }
                 }
-                // console.info('transform on ', item);
-            } else { // rect, use, text, ellipse, circle
-                if (!item.closest('.chord') && !item.closest('.note')) { // not within
-                    let attribute = 'x';
-                    if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
-                        attribute = 'cx';
-                    let x = parseFloat(item.getAttribute(attribute));
-                    let d = 0;
-                    d = warpingFunction[Math.round(x)];
-                    item.setAttribute(attribute, x + d);
+
+                else if (item.nodeName == 'line') {
+                    let x1 = parseFloat(item.getAttribute('x1'));
+                    let x2 = parseFloat(item.getAttribute('x2'));
+                    let xShift1 = warpingFunction[Math.round(x1)];
+                    let xShift2 = warpingFunction[Math.round(x2)];
+                    this.#shiftElement(item, x1, x2, xShift1, xShift2);
                 }
-            }
-        });
+
+                // rect, use, text, ellipse, circle
+                else {
+                    // console.debug('Shift other item ', item);
+                    if (!item.closest('.chord') && !item.closest('.note')) { // not within
+                        let attribute = 'x';
+                        if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
+                            attribute = 'cx';
+                        let x = parseFloat(item.getAttribute(attribute));
+                        let xShift = 0;
+                        xShift = warpingFunction[Math.round(x)];
+                        item.setAttribute(attribute, x + xShift);
+                    }
+                }
+
+
+            });
+
+        }
+
+
+        if (false) {
+            selectorList.forEach(item => {
+                // console.debug('Shifting ', item);
+                if (item.nodeName == 'polygon') { // beam
+                    let pointsList = item.points;
+                    let n = pointsList.numberOfItems;
+                    let beam = item.closest('.beam');
+                    if (beam && n == 4) {
+                        // shift beam with 4 points
+                        console.debug('SSSSSSSSS ShiftBeam with 4 points', item);
+                        // this.#shiftBeam(beam, item, warpingFunction);
+                    } else {
+                        console.debug('ShiftPolygon ', item);
+                        console.debug('with ' + n + ' points: ', item.points);
+                        for (let m = 0; m < n; m++) {
+                            var mySVGPoint = this._svgObj.createSVGPoint();
+                            let x = pointsList.getItem(m).x;
+                            mySVGPoint.x = x + warpingFunction[Math.round(x)];
+                            mySVGPoint.y = pointsList.getItem(m).y;
+                            pointsList.replaceItem(mySVGPoint, m);
+                        }
+                    }
+                } else if (item.nodeName == 'path' && !item.closest('.note, .chord')) { // slur, barline, ledgerLines, staff lines
+                    let bbox = item.getBBox();
+                    console.log('Path BBox(): ', bbox);
+                    let x1 = bbox.x;
+                    let x2 = bbox.x + bbox.width;
+
+                    // compute transform values
+                    let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+                    let xShift2 = warpingFunction[Math.round(x2)];
+                    // new width relative to old width
+                    let xScale = ((x2 + xShift2) - (x1 + xShift1)) / (x2 - x1);
+                    console.log('x1/x2: ' + x1 + '/' + x2 +
+                        ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
+                        ', xScale: ' + xScale);
+
+                    // add a transformation, if none exists
+                    let transformList = item.transform.baseVal; // SVGTransformList
+                    if (transformList.length === 0) {
+
+                        // debug stops
+                        if (item.closest('.ledgerLines')) {
+                            console.log('ledgerLines: ', item);
+                            // find note element that this ledgerLines belongs to
+                            let note = item.closest('.staff').querySelectorAll('.note');
+
+                        } else if (item.closest('.slur')) {
+                            console.log('slur: ', item);
+                        } else if (item.closest('.barline')) {
+                            console.log('barline: ', item);
+                        }
+
+                        if (xShift1 && xShift1 < Infinity) {
+                            const translate = this._svgObj.createSVGTransform();
+                            translate.setTranslate(xShift1, 0);
+                            transformList.appendItem(translate);
+                        }
+                        item.setAttribute('transform-origin', x1);
+                        if (xScale && xScale < Infinity && xScale > 0 && !item.closest('.ledgerLines')) {
+                            const scale = this._svgObj.createSVGTransform();
+                            scale.setScale(xScale, 1);
+                            transformList.appendItem(scale);
+                        }
+
+                    }
+
+
+                    // let segList = item.pathSegList;
+                    // if (segList) {
+                    //     let n = segList.numberOfItems;
+                    //     let ledgerLines = item.closest('.ledgerLines');
+                    //     if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
+                    //         // console.debug('shiftElements ledgerLines: ', ledgerLines);
+                    //         // console.debug('segList x: ' + segList[0].x + '/' + segList[1].x);
+                    //         // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
+                    //         let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
+                    //         // console.debug('x=' + x);
+                    //         this.#translate(item, warpingFunction[x]);
+                    //     } else {
+                    //         for (let i = 0; i < n; i++) {
+                    //             var segment = segList.getItem(i);
+                    //             segment.x += warpingFunction[Math.round(Math.max(0, segment.x))];
+                    //             if (segment.x1)
+                    //                 segment.x1 += warpingFunction[Math.round(Math.max(0, segment.x1))];
+                    //             if (segment.x2)
+                    //                 segment.x2 += warpingFunction[Math.round(Math.max(0, segment.x2))];
+                    //         }
+                    //     }
+                    // } else {
+                    //     console.log('Path does not have pathSegList: ', item);
+                    // }
+                } else if (item.nodeName == 'g') { // note / chord / arpeg
+                    let x = this.getX(item);
+                    let d = warpingFunction[Math.round(x)];
+                    if (item.className.baseVal === 'arpeg') {
+                        console.debug('shiftElements ARPEG: ', item);
+                        this.#addTranslation(item, d);
+                    } else {
+                        this.#translate(item, d); // translate in combination w\ existing translte
+                        // if within chord & first note in chord, translate stem/artic too
+                        let chord = item.closest('.chord');
+                        if (chord &&
+                            chord.querySelector('.note').getAttribute('id') === item.getAttribute('id')) {
+                            let stem = chord.querySelector('.stem');
+                            if (stem) this.#translate(stem, d);
+                            let artics = chord.querySelectorAll('.artic');
+                            if (artics) artics.forEach(item => this.#translate(item, d));
+                            let dots = chord.querySelectorAll('.dots');
+                            if (dots) dots.forEach(item => this.#translate(item, d));
+                        }
+                    }
+                    // console.debug('transform on ', item);
+                } else { // rect, use, text, ellipse, circle
+                    if (!item.closest('.chord') && !item.closest('.note')) { // not within
+                        let attribute = 'x';
+                        if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
+                            attribute = 'cx';
+                        let x = parseFloat(item.getAttribute(attribute));
+                        let d = 0;
+                        d = warpingFunction[Math.round(x)];
+                        item.setAttribute(attribute, x + d);
+                    }
+                }
+            });
+        }
     } // shiftElements()
 
-    /**
-    * Shifts a beam horizontally by modifying the x coordinates of the polygon
-    * @param {Element} beam - the beam element
-    * @param {Element} polygon - the polygon element
-    * @param {Array} delta - the warping function
-    */
-    #shiftBeam(beam, polygon, delta) {
-        let stems = beam.querySelectorAll('.stem > path');
-        let px1 = polygon.points[0].x;
-        let px2 = polygon.points[1].x;
-        // console.info('beam: ', beam);
-        // console.info('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
-        let diffs1 = [];
-        let diffs2 = [];
-        stems.forEach((item) => {
-            diffs1.push(Math.abs(item.getAttribute('x') - px1));
-            diffs2.push(Math.abs(item.getAttribute('x') - px2));
-        });
-        // console.info('diffs: ', diffs1, diffs2);
-        let i1 = this.#indexOfMin(diffs1);
-        let i2 = this.#indexOfMin(diffs2);
-        if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
-            if (diffs1[i1] <= diffs2[i2])
-                i2 = this.#indexOfMin(diffs2, i2);
-            else
-                i1 = this.#indexOfMin(diffs1, i1);
-        }
-        let n1 = stems[i1].closest('.note');
-        if (!n1) n1 = stems[i1].closest('.chord');
-        let x1 = n1.querySelector('.notehead>use').getAttribute('x');
-        let n2 = stems[i2].closest('.note');
-        if (!n2) n2 = stems[i2].closest('.chord');
-        let x2 = n2.querySelector('.notehead>use').getAttribute('x');
+    // /**
+    // * Shifts a beam horizontally by modifying the x coordinates of the polygon
+    // * @param {Element} beam - the beam element
+    // * @param {Element} polygon - the polygon element
+    // * @param {Array} delta - the warping function
+    // */
+    // #shiftBeam(beam, polygon, delta) {
+    //     let stems = beam.querySelectorAll('.stem > path');
+    //     let px1 = polygon.points[0].x;
+    //     let px2 = polygon.points[1].x;
+    //     // console.debug('beam: ', beam);
+    //     // console.debug('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
+    //     let diffs1 = [];
+    //     let diffs2 = [];
+    //     stems.forEach((item) => {
+    //         diffs1.push(Math.abs(item.getAttribute('x') - px1));
+    //         diffs2.push(Math.abs(item.getAttribute('x') - px2));
+    //     });
+    //     // console.debug('diffs: ', diffs1, diffs2);
+    //     let i1 = this.#indexOfMin(diffs1);
+    //     let i2 = this.#indexOfMin(diffs2);
+    //     if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
+    //         if (diffs1[i1] <= diffs2[i2])
+    //             i2 = this.#indexOfMin(diffs2, i2);
+    //         else
+    //             i1 = this.#indexOfMin(diffs1, i1);
+    //     }
+    //     let n1 = stems[i1].closest('.note');
+    //     if (!n1) n1 = stems[i1].closest('.chord');
+    //     let x1 = n1.querySelector('.notehead>use').getAttribute('x');
+    //     let n2 = stems[i2].closest('.note');
+    //     if (!n2) n2 = stems[i2].closest('.chord');
+    //     let x2 = n2.querySelector('.notehead>use').getAttribute('x');
 
-        for (let m = 0; m < polygon.points.numberOfItems; m++) {
-            var mySVGPoint = this._svgObj.createSVGPoint();
-            let x = polygon.points.getItem(m).x;
-            if (m == 0 || m == 3)
-                mySVGPoint.x = x + delta[Math.round(x1)];
-            else
-                mySVGPoint.x = x + delta[Math.round(x2)];
-            mySVGPoint.y = polygon.points.getItem(m).y;
-            polygon.points.replaceItem(mySVGPoint, m);
-        }
-    } // shiftBeam()
+    //     for (let m = 0; m < polygon.points.numberOfItems; m++) {
+    //         var mySVGPoint = this._svgObj.createSVGPoint();
+    //         let x = polygon.points.getItem(m).x;
+    //         if (m == 0 || m == 3)
+    //             mySVGPoint.x = x + delta[Math.round(x1)];
+    //         else
+    //             mySVGPoint.x = x + delta[Math.round(x2)];
+    //         mySVGPoint.y = polygon.points.getItem(m).y;
+    //         polygon.points.replaceItem(mySVGPoint, m);
+    //     }
+    // } // shiftBeam()
 
     /**
      * Translates item object, checking if a translate is already there.
@@ -521,74 +690,78 @@
      */
     #translate(item, delta, useExisting = true) {
         let existingX = 0;
-        let trList = item.transform.baseVal; // SVGTransformList
-        if (trList && trList.length > 0) { // if transform exists
-            // console.info('SVGTransformList EXISTING: ', trList);
+        let transformList = item.transform.baseVal; // SVGTransformList
+
+        if (transformList && transformList.length > 0) { // if transform exists
+            console.debug('SVGTransformList EXISTING: ', transformList);
             let index = -1;
-            for (let currTrans of trList) {
+            for (let currTrans of transformList) {
                 index++;
                 // trList.forEach((currTrans, i) => {
-                if (currTrans.type == SVGTransform.SVG_TRANSFORM_TRANSLATE) {
-                    // console.info('TRANSLATION FOUND: ', item);
+                if (currTrans.type === SVGTransform.SVG_TRANSFORM_TRANSLATE) {
+                    // console.debug('TRANSLATION FOUND: ', item);
                     if (useExisting) existingX = currTrans.matrix.e;
                     break;
                 }
             }
-            trList.getItem(index).setTranslate(existingX + delta, 0);
+            transformList.getItem(index).setTranslate(existingX + delta, 0);
         } else { // create new transform
-            // console.info('SVGTransformList EMPTY: ', trList);
-            // if (useExisting) {
-            //   existingX = trList.getItem(0).matrix.e;
-            //   if (existingX > 0) console.info('EXISTING X: ' + existingX, item);
-            // }
+            console.debug('SVGTransformList EMPTY: ', transformList);
             let translate = this._svgObj.createSVGTransform();
             translate.setTranslate(existingX + delta, 0);
-            item.transform.baseVal.appendItem(translate);
+            transformList.appendItem(translate);
         }
     } // translate()
 
     /**
-     * Add a translation to an item object
-     * @param {Element} item 
+     * Add a translation to an element node
+     * @param {Element} element 
      * @param {Number} delta 
+     * @param {Boolean} clearTransforms
      */
-    #addTranslation(item, delta) {
+    #addTranslation(element, delta, clearTransforms = false) {
+        if (clearTransforms) element.transform.baseVal.clear();
         let newTranslate = this._svgObj.createSVGTransform();
         newTranslate.setTranslate(delta, 0);
-        item.transform.baseVal.insertItemBefore(newTranslate, 0);
+        element.transform.baseVal.insertItemBefore(newTranslate, 0);
     } // addTranslation()
 
-
     /**
-     * Returns the x coordinate of an element
-     * @param {Element} el
-     * @returns {Number} x coordinate
+     * Shifts element across the x-axis by adding a translation and a scale transformation to it.
+     * @param {Element} element 
+     * @param {Number} x1 first x coordinate
+     * @param {Number} x2 last x coordinate
+     * @param {Number} xShift1 x shift for x1
+     * @param {Number} xShift2 x shift for x2
      */
-    getX(el) {
-        switch (el.nodeName) {
-            case 'polygon':
-                return el.points.getItem(0).x;
-            case 'path':
-                return el.pathSegList.getItem(0).x;
-            case 'ellipse' || 'circle':
-                return parseFloat(el.getAttribute('cx'));
-            case 'rect' || 'use' || 'text':
-                return parseFloat(el.getAttribute('x'));
-            case 'g': // for .chord, .note
-                let className = el.getAttribute('class');
-                if (className && (className == 'chord' || className == 'note'))
-                    return parseFloat(
-                        el.querySelector('.notehead>use[x]').getAttribute('x'));
-                else
-                    return parseFloat(el.querySelector('use[x]').getAttribute('x'));
-        }
-    } // getX()
+    #shiftElement(element, x1, x2, xShift1, xShift2) {
+        let xScale = ((x2 + xShift2) - (x1 + xShift1)) / (x2 - x1);
+        console.log('x1/x2: ' + x1 + '/' + x2 +
+            ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
+            ', xScale: ' + xScale);
 
-    #indexOfMin(a, notThis = -1) {
-        let lowest = 0;
-        a.forEach((item, i) => {
-            if (item < a[lowest] && i != notThis) lowest = i;
-        });
-        return lowest;
-    }
+        // add a transformation, if none exists
+        let transformList = element.transform.baseVal; // SVGTransformList
+        if (transformList.length === 0) {
+            if (xShift1 && xShift1 < Infinity) {
+                const translate = this._svgObj.createSVGTransform();
+                translate.setTranslate(xShift1, 0);
+                transformList.appendItem(translate);
+            }
+            element.setAttribute('transform-origin', x1);
+            if (xScale && xScale < Infinity && xScale > 0) {
+                const scale = this._svgObj.createSVGTransform();
+                scale.setScale(xScale, 1);
+                transformList.appendItem(scale);
+            }
+        }
+    } // shiftElement()
+
+    // #indexOfMin(a, notThis = -1) {
+    //     let lowest = 0;
+    //     a.forEach((item, i) => {
+    //         if (item < a[lowest] && i != notThis) lowest = i;
+    //     });
+    //     return lowest;
+    // }
 } // ScoreWarper class

@@ -17,7 +17,7 @@
     let meiFileName = '';
     let mapsFileName = '';
 
-    const dateString = 'debug version, 3 October 2024';
+    const dateString = 'debug version, 4 October 2024';
     const svgNS = "http://www.w3.org/2000/svg";
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
@@ -88,11 +88,12 @@
       document.getElementById("downloadLink").innerHTML = "";
       document.getElementById("performanceTime").innerHTML = "";
       document.getElementById("notation").innerHTML = '<b>Loading ' + meiFileName + '...</b>';
+      console.log('Loading ' + meiFileName + '...');
       if (reload) {
         fetch(meiFileName)
           .then((response) => response.text())
           .then((meiText) => {
-            console.log("MEI loaded.", meiText);
+            console.log("MEI loaded."); // , meiText);
             tk.setOptions({
               scale: 30,
               breaks: "none",
@@ -100,7 +101,7 @@
               footer: "none"
             });
             svgString = tk.renderData(meiText, {});
-            console.log("SVG loaded.", svgString);
+            console.log("SVG rendered.");
 
             // when SVG is loaded, finalize loading
             updateGUI();
@@ -118,27 +119,27 @@
      * List all warpable elements of the score.
      */
     function updateGUI() {
-      console.log("loadMEIfinalizing()");
+      // console.log("loadMEIfinalizing()");
 
       // parse SVG text to SVG object
       let svgDocument = new DOMParser().parseFromString(svgString, "image/svg+xml");
       if (svgDocument.childNodes && svgDocument.childNodes.length > 0) {
         scoreWarper = new ScoreWarper(svgDocument.childNodes[0]);
-        console.log("SVG inside ScoreWarper:", scoreWarper.svgObj);
+        // console.log("SVG inside ScoreWarper:", scoreWarper.svgObj);
       }
 
       // update notation panel
       let notationDiv = document.getElementById("notation");
       notationDiv.innerHTML = "<p><b>" + pieceSel.value + "</b></p>";
       notationDiv.appendChild(scoreWarper.svgObj);
-      console.info('NotationDiv: ', notationDiv);
+      // console.log('NotationDiv: ', notationDiv);
 
       // list all warpable elements of score
       elementList = scoreWarper.svgObj.querySelector('.page-margin').querySelectorAll(
         'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
       // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
       // ellipse, circle, path');
-      console.info('elementList: ', elementList);
+      // console.log('elementList: ', elementList);
 
       if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
         demoFiles[pieceSel.value].performances[perfSel.value]) {
@@ -170,10 +171,10 @@
         document.getElementById("downloadLink").innerHTML = "";
 
         scoreWarper.warp();
+        warped = true;
 
         drawConnectorLines('chords');
         drawTimeAxis(scoreWarper.svgObj, true, scoreWarper.svgHeight - 20, 'cornflowerblue');
-        warped = true;
         // createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
       }
     } // warp()
@@ -295,7 +296,7 @@
       drawConnectorLines('score');
       drawTimeAxis(document.querySelector('.performanceTime'));
 
-      // DEBUG: plot warping function...
+      // for DEBUGGING: plot warping function...
       if (true) {
         let pageMarginElement = document.querySelector('.page-margin');
         drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
