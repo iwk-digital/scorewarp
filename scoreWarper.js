@@ -55,6 +55,8 @@
      * @param {Object} maps 
      */
     loadMaps(maps) {
+        console.debug('ScoreWarper loadMaps() maps: ', maps);
+
         // determine global min and max onset times from maps object
         this._tmn = maps[this.firstOnsetIdx(maps)].obs_mean_onset;
         this._tmx = maps[this.lastOnsetIdx(maps)].obs_mean_onset;
@@ -76,10 +78,12 @@
         maps.forEach((item, i) => {
             if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
                 let note = this._svgObj.querySelector('[*|id="' + item.xml_id[0] + '"]');
+                // console.debug(i + '; note: ', note);
                 if (note) {
                     // take center of notes as x value
                     let bbox = note.querySelector('.notehead use')?.getBBox();
-                    let noteX = bbox.x + bbox.width / 2;
+                    // console.debug('Note BBox: ', bbox);
+                    let noteX = bbox.x; // + bbox.width / 2;
                     if (!noteX) {
                         console.warn('Note without notehead: ', note);
                     }
@@ -143,8 +147,8 @@
                 item.xml_id.forEach(id => {
                     let note = this._svgObj.querySelector(`[*|id="${id}"]`);
                     if (note) {
-                        let use = note.querySelector('g.notehead use');
-                        let noteX = parseFloat(use.getAttribute('x'));
+                        let noteHeadBB = note.querySelector('g.notehead')?.getBBox();
+                        let noteX = noteHeadBB.x + noteHeadBB.width / 2;
                         this.#translate(note, onsetSVGx - noteX, false);
                     }
                 });

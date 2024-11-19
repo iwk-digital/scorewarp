@@ -17,7 +17,7 @@
     let meiFileName = '';
     let mapsFileName = '';
 
-    const dateString = 'debug version, 4 October 2024';
+    const dateString = 'debug version, 19 November 2024-' + Date.now();
     const svgNS = "http://www.w3.org/2000/svg";
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
@@ -211,6 +211,8 @@
           let t = item.obs_mean_onset;
           let screenX = (t - scoreWarper.tmn) / (scoreWarper.tmx - scoreWarper.tmn) *
             (scoreWarper.lstX - scoreWarper.fstX) + scoreWarper.fstX;
+          screenX = scoreWarper.time2screen(t);
+
           if (target == 'score')
             addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
           else
@@ -220,14 +222,20 @@
     } // drawConnectorLines()
 
     /**
-     * Draws orange lines inside SVG (for debugging)
+     * Draws red lines inside SVG (for debugging)
      */
-    function drawPerformanceLinesInSvg() {
+    function drawLinesInScore() {
       let pageMarginElement = document.querySelector('.page-margin');
-      scoreWarper.onsetSVGXs.forEach(item => {
-        addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-      });
-    } // drawPerformanceLinesInSvg()
+      if (!warped) {
+        scoreWarper.noteSVGXs.forEach(item => {
+          addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      } else { // this is for warped notes, probably never called
+        scoreWarper.onsetSVGXs.forEach(item => {
+          addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      }
+    } // drawLinesInScore()
 
     /**
      * Draws warp function in notation panel
@@ -302,7 +310,7 @@
         drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
 
         createSVGDownloadLink(serializer.serializeToString(scoreWarper.svgObj));
-        drawPerformanceLinesInSvg();
+        drawLinesInScore();
       }
     } // loadPerformanceTiming()
 
