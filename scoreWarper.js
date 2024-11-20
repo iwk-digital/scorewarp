@@ -119,13 +119,12 @@
         // selector for SVG elements that need to be warped
         let listOfSelectors = [
             'g.note,g.rest,g.arpeg',
-            // ':not(g.notehead):not(g.arpeg)>use[x]',
-            'rect[x]',
-            'text[x]',
-            'line',
-            'polygon', // for beams
-            'ellipse', // for dots
-            'circle', // for what?
+            // 'rect[x]',
+            // 'text[x]',
+            'line', // for red lines
+            // 'polygon', // for beams
+            // 'ellipse', // not for dots
+            // 'circle', // for what?
             'path', // for slur, barline, ledgerLines (stem handled by note, staff lines)
         ];
 
@@ -403,10 +402,13 @@
             console.debug('XXXXXXX Shifting ' + list.length + ' ' + selector + ' elements.');
             list.forEach(item => {
 
-
-                // note / rest / arpeg
+                // g.note / g.rest / g.arpeg
                 if (item.nodeName == 'g') {
-                    let x = item.getBBox().x + item.getBBox().width / 2;
+                    let x = item.getBBox().x; // + item.getBBox().width / 2;
+                    if (item.className.baseVal === 'note') {
+                        // for notes, use notehead x value (to avoid incorrect shifting with accidentals)
+                        x = item.querySelector('.notehead use').getBBox().x;
+                    }
                     let xShift = warpingFunction[Math.round(x)];
                     if (item.className.baseVal === 'arpeg') {
                         console.debug('shiftElements ARPEG: ', item);
@@ -441,18 +443,24 @@
                     }
                 }
 
-                // slur, barline, ledgerLines, staff lines
+                // slur, barline, staff lines, red debug lines
                 else if (item.nodeName == 'path' && !item.closest('.note, .chord, .ledgerLines')) {
                     let bbox = item.getBBox();
-                    console.log('Path BBox(): ', bbox);
-                    let x1 = bbox.x;
-                    let x2 = bbox.x + bbox.width;
+                    // retrieve parent element's class
+                    let parentClass = item.parentElement.className.baseVal;
 
-                    // compute transform values
-                    let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
-                    let xShift2 = warpingFunction[Math.round(x2)];
+                    let staff = item.closest('.staff');
+                    if (!staff) {
+                        console.log('Shift ', parentClass, ': Path BBox(): ', bbox);
+                        let x1 = bbox.x;
+                        let x2 = bbox.x + bbox.width;
 
-                    this.#shiftElement(item, x1, x2, xShift1, xShift2);
+                        // compute transform values
+                        let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+                        let xShift2 = warpingFunction[Math.round(x2)];
+
+                        this.#shiftElement(item, x1, x2, xShift1, xShift2);
+                    }
                 }
 
                 // beam
@@ -740,7 +748,7 @@
      */
     #shiftElement(element, x1, x2, xShift1, xShift2) {
         let xScale = ((x2 + xShift2) - (x1 + xShift1)) / (x2 - x1);
-        console.log('x1/x2: ' + x1 + '/' + x2 +
+        console.log('shiftElement x1/x2: ' + x1 + '/' + x2 +
             ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
             ', xScale: ' + xScale);
 
