@@ -407,8 +407,7 @@
         .then(response => response.json())
         .then(json => {
           // set maps object in scoreWarper
-          scoreWarper.maps = json;
-          loadPerformanceTiming(scoreWarper.maps);
+          loadPerformanceTiming(json);
         });
       console.info('updateMapsFile maps: ', scoreWarper.maps);
     }
