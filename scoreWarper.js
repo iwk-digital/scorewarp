@@ -405,59 +405,122 @@
             list.forEach((item) => {
 
                 // g.arpeg
-                if (item.nodeName == 'g' && item.className.baseVal === 'arpeg') {
+                if (item.nodeName == 'g' && item.classList.contains('arpeg')) {
                     let x = item.getBBox().x; // + item.getBBox().width / 2;
                     let xShift = warpingFunction[Math.round(x)];
                     console.debug('shiftElements ARPEG: ', item);
                     this.#addTranslation(item, xShift);
                 }
                 // g.beam
-                else if (item.nodeName == 'g' && item.className.baseVal === 'beam') {
+                else if (item.nodeName == 'g' && item.classList.contains('beam')) {
                     let polygons = item.querySelectorAll('polygon');
-
-                    // find first and last notehead/stem in beam
-
-                    // TODO: adjust sub-beams for individual stems/noteheads
-
                     let noteheads = item.querySelectorAll('.notehead');
-                    let leftNote, rightNote;
-                    let leftNoteX = Number.MAX_VALUE, rightNoteX = Number.MIN_VALUE;
-                    let leftX, rightX;
-                    let leftNoteXShift = 0, rightNoteXShift = 0;
-                    noteheads.forEach(element => {
-                        let noteheadX = element.getBBox().x;
-                        let parentElement = element.closest('.chord');
-                        if (!parentElement) parentElement = element.closest('.note');
-                        let stemX = parentElement.querySelector('.stem')?.getBBox()?.x
-                        if (noteheadX < leftNoteX) {
-                            leftNote = element;
-                            leftNoteX = noteheadX;
-                            leftX = stemX;
-                        }
-                        if (noteheadX > rightNoteX) {
-                            rightNote = element;
-                            rightNoteX = noteheadX;
-                            rightX = stemX;
-                        }
-                    });
-                    if (leftNoteX < Number.MAX_VALUE && rightNoteX > Number.MIN_VALUE) {
-                        leftNoteXShift = warpingFunction[Math.round(leftNoteX)];
-                        rightNoteXShift = warpingFunction[Math.round(rightNoteX)];
+                    let stems = item.querySelectorAll('.stem');
 
-                        console.debug('BEAM ShiftPolygon left/right note: ', leftNote, rightNote);
-                        console.debug('BEAM ShiftPolygon x1/x2: ' + leftNoteX + '/' + rightNoteX +
-                            ', xShift1/xShift2: ' + leftNoteXShift + '/' + rightNoteXShift);
+                    // find first and last notehead/stem in beam for each polygon
+                    polygons.forEach((polygon) => {
 
-                        polygons.forEach(polygon => {
-                            this.#shiftElement(polygon, leftX, rightX, leftNoteXShift, rightNoteXShift);
+                        let leftStem, rightStem;
+                        let boundingBox = polygon.getBBox();
+                        let leftNote, rightNote;
+                        let leftNoteX = Number.MAX_VALUE;
+                        let rightNoteX = Number.MIN_VALUE;
+
+                        console.debug('SSSSSSSSS Beam part ', polygon);
+                        console.debug('SSSSSSSSS Stems within beam ', stems);
+                        console.debug('SSSSSSSSS Noteheads within beam ', noteheads);
+
+                        // look for all stems within the beam and find closest left and right stem
+                        stems.forEach((stem, i) => {
+                            let stemX = stem.getBBox().x;
+                            let threshold = 12; // SVG px
+                            if (Math.abs(stemX - boundingBox.x) < threshold)
+                                leftStem = stem;
+                            else if (Math.abs(stemX - boundingBox.x - boundingBox.width) < threshold) {
+                                rightStem = stem;
+                            }
                         });
+
+                        // if no left or right stem found, take first and last stem respectively
+                        if (!leftStem) leftStem = stems.item(0);
+                        if (!rightStem) rightStem = stems.item(stems.length - 1);
+
+                        // for leftStem and rightStem, find a notehead; if in a chord, find closest notehead
+                        let leftParent = leftStem.closest('.chord');
+                        if (!leftParent) {
+                            leftParent = leftStem.closest('.note');
+                        }
+                        leftNote = leftParent.querySelector('.notehead');
+                        let rightParent = rightStem.closest('.chord');
+                        if (!rightParent) {
+                            rightParent = rightStem.closest('.note');
+                        }
+                        rightNote = rightParent.querySelector('.notehead');
+
+                        console.debug('BEAM ShiftPolygon left/right stem: ', leftStem, rightStem);
+                        console.debug('BEAM ShiftPolygon left/right notehead: ', leftNote, rightNote);
+
+                        // shift polygon, x by stems, shift by noteheads
+                        if (leftStem && rightStem) {
+                            let x1 = leftStem.getBBox().x;
+                            let x2 = rightStem.getBBox().x;
+                            let xShift1 = warpingFunction[Math.round(x1)];
+                            let xShift2 = warpingFunction[Math.round(x2)];
+                            if (leftNote) {
+                                xShift1 = warpingFunction[Math.round(leftNote.getBBox().x)];
+                            }
+                            if (rightNote) {
+                                xShift2 = warpingFunction[Math.round(rightNote.getBBox().x)];
+                            }
+
+                            console.debug('BEAM ShiftPolygon x1/x2: ' + x1 + '/' + x2 +
+                                ', xShift1/xShift2: ' + xShift1 + '/' + xShift2);
+                            this.#shiftElement(polygon, x1, x2, xShift1, xShift2, true);
+                        }
+
+                    });
+
+                    if (false) {
+                        // shift by first and last notehead
+                        let leftNote, rightNote;
+                        let leftX, rightX;
+                        let leftNoteXShift = 0, rightNoteXShift = 0;
+                        noteheads.forEach(element => {
+                            let noteheadX = element.getBBox().x;
+                            let parentElement = element.closest('.chord');
+                            if (!parentElement) parentElement = element.closest('.note');
+                            let stemX = parentElement.querySelector('.stem')?.getBBox()?.x
+                            if (noteheadX < leftNoteX) {
+                                leftNote = element;
+                                leftNoteX = noteheadX;
+                                leftX = stemX;
+                            }
+                            if (noteheadX > rightNoteX) {
+                                rightNote = element;
+                                rightNoteX = noteheadX;
+                                rightX = stemX;
+                            }
+                        });
+                        if (leftNoteX < Number.MAX_VALUE && rightNoteX > Number.MIN_VALUE) {
+                            leftNoteXShift = warpingFunction[Math.round(leftNoteX)];
+                            rightNoteXShift = warpingFunction[Math.round(rightNoteX)];
+
+                            console.debug('BEAM ShiftPolygon left/right note: ', leftNote, rightNote);
+                            console.debug('BEAM ShiftPolygon x1/x2: ' + leftNoteX + '/' + rightNoteX +
+                                ', xShift1/xShift2: ' + leftNoteXShift + '/' + rightNoteXShift);
+
+                            polygons.forEach(polygon => {
+                                this.#shiftElement(polygon, leftX, rightX, leftNoteXShift, rightNoteXShift);
+                            });
+                        }
                     }
+
                 }
                 // g.note (g.chord) / g.rest 
                 else if (item.nodeName == 'g' &&
-                    (item.className.baseVal === 'note' || item.className.baseVal === 'rest')) {
+                    (item.classList.contains('note') || item.classList.contains('rest'))) {
                     let x = item.getBBox().x; // + item.getBBox().width / 2;
-                    if (item.className.baseVal === 'note') {
+                    if (item.classList.contains('note')) {
                         // for notes, use notehead x value (to avoid incorrect shifting with accidentals)
                         x = item.querySelector('.notehead use').getBBox().x;
                     }
@@ -497,8 +560,8 @@
                     let parentClass = item.parentElement.className.baseVal;
 
                     let staff = item.closest('.staff');
-                    if (!staff) {
-                        console.log('Shift ', parentClass, ': Path BBox(): ', bbox);
+                    if (parentClass && !staff) {
+                        // console.log('Shift ', parentClass, ': Path BBox(): ', bbox);
                         let x1 = bbox.x;
                         let x2 = bbox.x + bbox.width;
 
@@ -763,11 +826,13 @@
      * @param {Number} xShift1 x shift for x1
      * @param {Number} xShift2 x shift for x2
      */
-    #shiftElement(element, x1, x2, xShift1, xShift2) {
+    #shiftElement(element, x1, x2, xShift1, xShift2, verbose = false) {
         let xScale = ((x2 + xShift2) - (x1 + xShift1)) / (x2 - x1);
-        // console.log('#shiftElement x1/x2: ' + x1 + '/' + x2 +
-        //     ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
-        //     ', xScale: ' + xScale);
+        if (verbose) {
+            console.log('#shiftElement x1/x2: ' + x1 + '/' + x2 +
+                ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
+                ', xScale: ' + xScale);
+        }
 
         // add a transformation, if none exists
         let transformList = element.transform.baseVal; // SVGTransformList
