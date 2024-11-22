@@ -121,9 +121,9 @@
             'g.beam', // for beams
             'line', // for red lines
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
-            'g:not(g.note):not(g.rest):not(g.arpeg):not(g.chord) use[x]', // for many elements
-            // 'rect[x]',
+            'use[x]', // for many elements
             // 'text[x]',
+            // 'rect[x]',
             // 'ellipse', // not for dots
             // 'circle', // for what?
         ];
@@ -400,6 +400,7 @@
         for (let selector of selectorList) {
             let list = this._svgObj.querySelectorAll(selector);
             console.debug('XXXXXXX Shifting ' + list.length + ' ' + selector + ' elements.');
+
             list.forEach((item) => {
 
                 // g.arpeg
@@ -412,7 +413,6 @@
                 // g.beam
                 else if (item.nodeName == 'g' && item.classList.contains('beam')) {
                     let polygons = item.querySelectorAll('polygon');
-                    let noteheads = item.querySelectorAll('.notehead');
                     let stems = item.querySelectorAll('.stem');
 
                     // find first and last notehead/stem in beam for each polygon
@@ -421,12 +421,10 @@
                         let leftStem, rightStem;
                         let boundingBox = polygon.getBBox();
                         let leftNote, rightNote;
-                        let leftNoteX = Number.MAX_VALUE;
-                        let rightNoteX = Number.MIN_VALUE;
 
-                        console.debug('SSSSSSSSS Beam part ', polygon);
-                        console.debug('SSSSSSSSS Stems within beam ', stems);
-                        console.debug('SSSSSSSSS Noteheads within beam ', noteheads);
+                        // console.debug('SSSSSSSSS Beam part ', polygon);
+                        // console.debug('SSSSSSSSS Stems within beam ', stems);
+                        // console.debug('SSSSSSSSS Noteheads within beam ', noteheads);
 
                         // look for all stems within the beam and find closest left and right stem
                         stems.forEach((stem, i) => {
@@ -455,8 +453,8 @@
                         }
                         rightNote = rightParent.querySelector('.notehead');
 
-                        console.debug('BEAM ShiftPolygon left/right stem: ', leftStem, rightStem);
-                        console.debug('BEAM ShiftPolygon left/right notehead: ', leftNote, rightNote);
+                        // console.debug('BEAM ShiftPolygon left/right stem: ', leftStem, rightStem);
+                        // console.debug('BEAM ShiftPolygon left/right notehead: ', leftNote, rightNote);
 
                         // shift polygon, x by stems, shift by noteheads
                         if (leftStem && rightStem) {
@@ -471,47 +469,12 @@
                                 xShift2 = warpingFunction[Math.round(rightNote.getBBox().x)];
                             }
 
-                            console.debug('BEAM ShiftPolygon x1/x2: ' + x1 + '/' + x2 +
-                                ', xShift1/xShift2: ' + xShift1 + '/' + xShift2);
-                            this.#shiftElement(polygon, x1, x2, xShift1, xShift2, true);
+                            // console.debug('BEAM ShiftPolygon x1/x2: ' + x1 + '/' + x2 +
+                            //     ', xShift1/xShift2: ' + xShift1 + '/' + xShift2);
+                            this.#shiftElement(polygon, x1, x2, xShift1, xShift2, false);
                         }
 
                     });
-
-                    if (false) {
-                        // shift by first and last notehead
-                        let leftNote, rightNote;
-                        let leftX, rightX;
-                        let leftNoteXShift = 0, rightNoteXShift = 0;
-                        noteheads.forEach(element => {
-                            let noteheadX = element.getBBox().x;
-                            let parentElement = element.closest('.chord');
-                            if (!parentElement) parentElement = element.closest('.note');
-                            let stemX = parentElement.querySelector('.stem')?.getBBox()?.x
-                            if (noteheadX < leftNoteX) {
-                                leftNote = element;
-                                leftNoteX = noteheadX;
-                                leftX = stemX;
-                            }
-                            if (noteheadX > rightNoteX) {
-                                rightNote = element;
-                                rightNoteX = noteheadX;
-                                rightX = stemX;
-                            }
-                        });
-                        if (leftNoteX < Number.MAX_VALUE && rightNoteX > Number.MIN_VALUE) {
-                            leftNoteXShift = warpingFunction[Math.round(leftNoteX)];
-                            rightNoteXShift = warpingFunction[Math.round(rightNoteX)];
-
-                            console.debug('BEAM ShiftPolygon left/right note: ', leftNote, rightNote);
-                            console.debug('BEAM ShiftPolygon x1/x2: ' + leftNoteX + '/' + rightNoteX +
-                                ', xShift1/xShift2: ' + leftNoteXShift + '/' + rightNoteXShift);
-
-                            polygons.forEach(polygon => {
-                                this.#shiftElement(polygon, leftX, rightX, leftNoteXShift, rightNoteXShift);
-                            });
-                        }
-                    }
 
                 }
                 // g.note (g.chord) / g.rest 
@@ -552,22 +515,24 @@
                 }
 
                 // slur, barline, staff lines, red debug lines
-                else if (item.nodeName == 'path' && !item.closest('.note, .chord, .ledgerLines')) {
-                    let bbox = item.getBBox();
-                    // retrieve parent element's class
-                    let parentClass = item.parentElement.className.baseVal;
+                else if (item.nodeName == 'path') {
+                    if (!item.closest('.note, .chord, .ledgerLines')) {
+                        let bbox = item.getBBox();
+                        // retrieve parent element's class
+                        let parentClass = item.parentElement.className.baseVal;
 
-                    let staff = item.closest('.staff');
-                    if (parentClass && !staff) {
-                        // console.log('Shift ', parentClass, ': Path BBox(): ', bbox);
-                        let x1 = bbox.x;
-                        let x2 = bbox.x + bbox.width;
+                        let staff = item.closest('.staff');
+                        if (parentClass && !staff) {
+                            // console.log('Shift ', parentClass, ': Path BBox(): ', bbox);
+                            let x1 = bbox.x;
+                            let x2 = bbox.x + bbox.width;
 
-                        // compute transform values
-                        let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
-                        let xShift2 = warpingFunction[Math.round(x2)];
+                            // compute transform values
+                            let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+                            let xShift2 = warpingFunction[Math.round(x2)];
 
-                        this.#shiftElement(item, x1, x2, xShift1, xShift2);
+                            this.#shiftElement(item, x1, x2, xShift1, xShift2);
+                        }
                     }
                 }
 
@@ -581,11 +546,15 @@
 
                 // rect, use, text, ellipse, circle
                 else {
-                    // console.debug('Shift other item ', item);
-                    if (!item.closest('.chord') && !item.closest('.note')) { // not within
+                    // console.debug('Potentiall shift ', item);
+                    if (!item.closest('.chord') && !item.closest('.note') &&
+                        !item.closest('.arpeg') && !item.closest('.rest')
+                    ) { // not within
+                        console.debug('Shift ', item, 'inside ', item.parentElement)
                         let attribute = 'x';
-                        if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
+                        if (item.nodeName == 'ellipse' || item.nodeName == 'circle') {
                             attribute = 'cx';
+                        }
                         let x = parseFloat(item.getAttribute(attribute));
                         let xShift = 0;
                         xShift = warpingFunction[Math.round(x)];
@@ -597,180 +566,7 @@
 
         }
 
-
-        if (false) {
-            selectorList.forEach(item => {
-                // console.debug('Shifting ', item);
-                if (item.nodeName == 'polygon') { // beam
-                    let pointsList = item.points;
-                    let n = pointsList.numberOfItems;
-                    let beam = item.closest('.beam');
-                    if (beam && n == 4) {
-                        // shift beam with 4 points
-                        console.debug('SSSSSSSSS ShiftBeam with 4 points', item);
-                        // this.#shiftBeam(beam, item, warpingFunction);
-                    } else {
-                        console.debug('ShiftPolygon ', item);
-                        console.debug('with ' + n + ' points: ', item.points);
-                        for (let m = 0; m < n; m++) {
-                            var mySVGPoint = this._svgObj.createSVGPoint();
-                            let x = pointsList.getItem(m).x;
-                            mySVGPoint.x = x + warpingFunction[Math.round(x)];
-                            mySVGPoint.y = pointsList.getItem(m).y;
-                            pointsList.replaceItem(mySVGPoint, m);
-                        }
-                    }
-                } else if (item.nodeName == 'path' && !item.closest('.note, .chord')) { // slur, barline, ledgerLines, staff lines
-                    let bbox = item.getBBox();
-                    console.log('Path BBox(): ', bbox);
-                    let x1 = bbox.x;
-                    let x2 = bbox.x + bbox.width;
-
-                    // compute transform values
-                    let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
-                    let xShift2 = warpingFunction[Math.round(x2)];
-                    // new width relative to old width
-                    let xScale = ((x2 + xShift2) - (x1 + xShift1)) / (x2 - x1);
-                    console.log('x1/x2: ' + x1 + '/' + x2 +
-                        ', xShift1/xShift2: ' + xShift1 + '/' + xShift2 +
-                        ', xScale: ' + xScale);
-
-                    // add a transformation, if none exists
-                    let transformList = item.transform.baseVal; // SVGTransformList
-                    if (transformList.length === 0) {
-
-                        // debug stops
-                        if (item.closest('.ledgerLines')) {
-                            console.log('ledgerLines: ', item);
-                            // find note element that this ledgerLines belongs to
-                            let note = item.closest('.staff').querySelectorAll('.note');
-
-                        } else if (item.closest('.slur')) {
-                            console.log('slur: ', item);
-                        } else if (item.closest('.barline')) {
-                            console.log('barline: ', item);
-                        }
-
-                        if (xShift1 && xShift1 < Infinity) {
-                            const translate = this._svgObj.createSVGTransform();
-                            translate.setTranslate(xShift1, 0);
-                            transformList.appendItem(translate);
-                        }
-                        item.setAttribute('transform-origin', x1);
-                        if (xScale && xScale < Infinity && xScale > 0 && !item.closest('.ledgerLines')) {
-                            const scale = this._svgObj.createSVGTransform();
-                            scale.setScale(xScale, 1);
-                            transformList.appendItem(scale);
-                        }
-
-                    }
-
-
-                    // let segList = item.pathSegList;
-                    // if (segList) {
-                    //     let n = segList.numberOfItems;
-                    //     let ledgerLines = item.closest('.ledgerLines');
-                    //     if (ledgerLines && n == 2) { // first 1/8x to translate ledgerLines
-                    //         // console.debug('shiftElements ledgerLines: ', ledgerLines);
-                    //         // console.debug('segList x: ' + segList[0].x + '/' + segList[1].x);
-                    //         // let x = Math.round((segList[0].x * 7 + segList[1].x) / 8);
-                    //         let x = segList[0].x + Math.round((segList[1].x - segList[0].x) / 8);
-                    //         // console.debug('x=' + x);
-                    //         this.#translate(item, warpingFunction[x]);
-                    //     } else {
-                    //         for (let i = 0; i < n; i++) {
-                    //             var segment = segList.getItem(i);
-                    //             segment.x += warpingFunction[Math.round(Math.max(0, segment.x))];
-                    //             if (segment.x1)
-                    //                 segment.x1 += warpingFunction[Math.round(Math.max(0, segment.x1))];
-                    //             if (segment.x2)
-                    //                 segment.x2 += warpingFunction[Math.round(Math.max(0, segment.x2))];
-                    //         }
-                    //     }
-                    // } else {
-                    //     console.log('Path does not have pathSegList: ', item);
-                    // }
-                } else if (item.nodeName == 'g') { // note / chord / arpeg
-                    let x = this.getX(item);
-                    let d = warpingFunction[Math.round(x)];
-                    if (item.className.baseVal === 'arpeg') {
-                        console.debug('shiftElements ARPEG: ', item);
-                        this.#addTranslation(item, d);
-                    } else {
-                        this.#translate(item, d); // translate in combination w\ existing translte
-                        // if within chord & first note in chord, translate stem/artic too
-                        let chord = item.closest('.chord');
-                        if (chord &&
-                            chord.querySelector('.note').getAttribute('id') === item.getAttribute('id')) {
-                            let stem = chord.querySelector('.stem');
-                            if (stem) this.#translate(stem, d);
-                            let artics = chord.querySelectorAll('.artic');
-                            if (artics) artics.forEach(item => this.#translate(item, d));
-                            let dots = chord.querySelectorAll('.dots');
-                            if (dots) dots.forEach(item => this.#translate(item, d));
-                        }
-                    }
-                    // console.debug('transform on ', item);
-                } else { // rect, use, text, ellipse, circle
-                    if (!item.closest('.chord') && !item.closest('.note')) { // not within
-                        let attribute = 'x';
-                        if (item.nodeName == 'ellipse' || item.nodeName == 'circle')
-                            attribute = 'cx';
-                        let x = parseFloat(item.getAttribute(attribute));
-                        let d = 0;
-                        d = warpingFunction[Math.round(x)];
-                        item.setAttribute(attribute, x + d);
-                    }
-                }
-            });
-        }
     } // shiftElements()
-
-    // /**
-    // * Shifts a beam horizontally by modifying the x coordinates of the polygon
-    // * @param {Element} beam - the beam element
-    // * @param {Element} polygon - the polygon element
-    // * @param {Array} delta - the warping function
-    // */
-    // #shiftBeam(beam, polygon, delta) {
-    //     let stems = beam.querySelectorAll('.stem > path');
-    //     let px1 = polygon.points[0].x;
-    //     let px2 = polygon.points[1].x;
-    //     // console.debug('beam: ', beam);
-    //     // console.debug('shiftBeam px12: ' + px1 + '/' + px2 + ', ', stems);
-    //     let diffs1 = [];
-    //     let diffs2 = [];
-    //     stems.forEach((item) => {
-    //         diffs1.push(Math.abs(item.getAttribute('x') - px1));
-    //         diffs2.push(Math.abs(item.getAttribute('x') - px2));
-    //     });
-    //     // console.debug('diffs: ', diffs1, diffs2);
-    //     let i1 = this.#indexOfMin(diffs1);
-    //     let i2 = this.#indexOfMin(diffs2);
-    //     if (stems[i1].getAttribute('id') == stems[i2].getAttribute('x')) {
-    //         if (diffs1[i1] <= diffs2[i2])
-    //             i2 = this.#indexOfMin(diffs2, i2);
-    //         else
-    //             i1 = this.#indexOfMin(diffs1, i1);
-    //     }
-    //     let n1 = stems[i1].closest('.note');
-    //     if (!n1) n1 = stems[i1].closest('.chord');
-    //     let x1 = n1.querySelector('.notehead>use').getAttribute('x');
-    //     let n2 = stems[i2].closest('.note');
-    //     if (!n2) n2 = stems[i2].closest('.chord');
-    //     let x2 = n2.querySelector('.notehead>use').getAttribute('x');
-
-    //     for (let m = 0; m < polygon.points.numberOfItems; m++) {
-    //         var mySVGPoint = this._svgObj.createSVGPoint();
-    //         let x = polygon.points.getItem(m).x;
-    //         if (m == 0 || m == 3)
-    //             mySVGPoint.x = x + delta[Math.round(x1)];
-    //         else
-    //             mySVGPoint.x = x + delta[Math.round(x2)];
-    //         mySVGPoint.y = polygon.points.getItem(m).y;
-    //         polygon.points.replaceItem(mySVGPoint, m);
-    //     }
-    // } // shiftBeam()
 
     /**
      * Translates item object, checking if a translate is already there.
