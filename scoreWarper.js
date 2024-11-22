@@ -122,7 +122,7 @@
             'line', // for red lines
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
             'use[x]', // for many elements
-            // 'text[x]',
+            'text[x]',
             // 'rect[x]',
             // 'ellipse', // not for dots
             // 'circle', // for what?
