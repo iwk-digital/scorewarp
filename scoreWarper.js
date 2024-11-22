@@ -4,8 +4,6 @@
  * Warps an score SVG notation file engraved by Verovio to a given time warping function. 
  * The time warping function is given as a list of time points and corresponding time warping factors.
  * 
- * TODO: Handle beams that are not connects.
- * TODO: Why are beams sometimes good, sometimes bad?
  * TODO: .tupletNum 'g use' not handled
 */class ScoreWarper {
 
@@ -123,7 +121,7 @@
             'g.beam', // for beams
             'line', // for red lines
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
-            // ':not(g.notehead):not(g.arpeg)>use[x]', // for many elements
+            'g:not(g.note):not(g.rest):not(g.arpeg):not(g.chord) use[x]', // for many elements
             // 'rect[x]',
             // 'text[x]',
             // 'ellipse', // not for dots
