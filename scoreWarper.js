@@ -147,9 +147,16 @@
                 item.xml_id.forEach(id => {
                     let note = this._svgObj.querySelector(`[*|id="${id}"]`);
                     if (note) {
+                        let xTranslate = note.transform.baseVal;
+                        let xShift = 0;
+                        if (xTranslate.length > 0) {
+                            xShift = xTranslate.getItem(0).matrix.e;
+                        } else {
+                            xShift = note.closest('.chord').transform.baseVal.getItem(0).matrix.e;
+                        }
                         let notehead = note.querySelector('g.notehead');
-                        let noteheadBB = notehead.getBoundingClientRect();
-                        let noteX = noteheadBB.x; // + noteHeadBB.width / 2;
+                        let noteheadBB = notehead?.getBBox();
+                        let noteX = noteheadBB.x + xShift; // + noteHeadBB.width / 2;
                         this.#translate(note, onsetSVGx - noteX, false);
                     }
                 });
