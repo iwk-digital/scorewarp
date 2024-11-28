@@ -119,12 +119,13 @@
             'g.note,g.rest', // for notes/chords and rests
             'g.arpeg', // for arpeggios
             'g.beam', // for beams
+            'g.hairpin', // for hairpins
             'line', // for red lines
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
             'use[x]', // for many elements
             'text[x]',
             // 'rect[x]',
-            // 'ellipse', // not for dots
+            // 'ellipse', // not for dots, for what?
             // 'circle', // for what?
         ];
 
@@ -146,8 +147,9 @@
                 item.xml_id.forEach(id => {
                     let note = this._svgObj.querySelector(`[*|id="${id}"]`);
                     if (note) {
-                        let noteHeadBB = note.querySelector('g.notehead')?.getBBox();
-                        let noteX = noteHeadBB.x + noteHeadBB.width / 2;
+                        let notehead = note.querySelector('g.notehead');
+                        let noteheadBB = notehead.getBoundingClientRect();
+                        let noteX = noteheadBB.x; // + noteHeadBB.width / 2;
                         this.#translate(note, onsetSVGx - noteX, false);
                     }
                 });
@@ -388,6 +390,22 @@
         }
     } // computeWarpingArray()
 
+    /**
+     * Computes the median of an array of numbers
+     * @param {Array[Number]} numbers 
+     * @returns {Number} median
+     */
+    median(numbers) {
+        const sorted = Array.from(numbers).sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+
+        if (sorted.length % 2 === 0) {
+            return (sorted[middle - 1] + sorted[middle]) / 2;
+        }
+
+        return sorted[middle];
+    } // median()
+
     //#region Shifting Methods
 
     /**
@@ -480,18 +498,33 @@
                 // g.note (g.chord) / g.rest 
                 else if (item.nodeName == 'g' &&
                     (item.classList.contains('note') || item.classList.contains('rest'))) {
+
+                    // determine x value of notehead    
                     let x = item.getBBox().x; // + item.getBBox().width / 2;
                     if (item.classList.contains('note')) {
                         // for notes, use notehead x value (to avoid incorrect shifting with accidentals)
                         x = item.querySelector('.notehead use').getBBox().x;
                     }
                     let xShift = warpingFunction[Math.round(x)];
-                    this.#translate(item, xShift); // translate in combination w\ existing translate
+
+                    let chord = item.closest('.chord');
+                    if (chord) {
+                        let noteheads = Array.from(chord.querySelectorAll('.notehead'));
+                        let chordXs = [];
+                        noteheads.map(notehead => chordXs.push(notehead.getBBox().x));
+                        x = this.median(chordXs);
+                        xShift = warpingFunction[Math.round(x)];
+                        if (chord.transform.baseVal.length === 0) {
+                            this.#translate(chord, xShift);
+                        }
+                    } else {
+                        this.#translate(item, xShift); // translate note in combination w\ existing translate
+                    }
 
                     // check for ledgerLines    
                     let ledgerLines = item.closest('.staff')?.querySelectorAll('.ledgerLines > path');
-                    if (ledgerLines && ledgerLines.length > 0) {
-                        // console.debug('shiftElements ledgerLines: ', ledgerLines);
+                    if (ledgerLines && ledgerLines.length > 0 && !item.classList.contains('rest')) {
+                        console.debug('shiftElements ledgerLines: ', ledgerLines);
                         ledgerLines.forEach(ledger => {
                             let boundingBox = ledger.getBBox();
                             if (boundingBox.x < x && boundingBox.x + boundingBox.width > x &&
@@ -502,8 +535,7 @@
                     }
 
                     // if within chord & first note in chord, translate stem/artic too
-                    let chord = item.closest('.chord');
-                    if (chord &&
+                    if (false && chord &&
                         chord.querySelector('.note').getAttribute('id') === item.getAttribute('id')) {
                         let stem = chord.querySelector('.stem');
                         if (stem) this.#translate(stem, xShift);
@@ -512,6 +544,17 @@
                         let dots = chord.querySelectorAll('.dots');
                         if (dots) dots.forEach(item => this.#translate(item, xShift));
                     }
+                }
+
+                // hairpin
+                else if (item.nodeName == 'g' && item.classList.contains('hairpin')) {
+                    let bbox = item.getBBox();
+                    let x1 = bbox.x;
+                    let x2 = bbox.x + bbox.width;
+                    let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+                    let xShift2 = warpingFunction[Math.round(x2)];
+
+                    this.#shiftElement(item, x1, x2, xShift1, xShift2);
                 }
 
                 // slur, barline, staff lines, red debug lines
@@ -548,7 +591,8 @@
                 else {
                     // console.debug('Potentiall shift ', item);
                     if (!item.closest('.chord') && !item.closest('.note') &&
-                        !item.closest('.arpeg') && !item.closest('.rest')
+                        !item.closest('.arpeg') && !item.closest('.rest') &&
+                        !item.closest('.hairpin')
                     ) { // not within
                         console.debug('Shift ', item, 'inside ', item.parentElement)
                         let attribute = 'x';
