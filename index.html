@@ -171,7 +171,9 @@
     } // keyboardListener()
 
     function warp() {
-      if (!scoreWarper.noteSVGXs) return;
+      if (!scoreWarper.noteSVGXs) {
+        return;
+      }
       if (!warped) {
         // clear download link element
         document.getElementById("downloadLink").innerHTML = "";
@@ -206,23 +208,22 @@
     // draw orange lines, to connect to 'score' or to performed 'notes'
     function drawConnectorLines(target = 'score') { // 'chords', 'notes'
       let pt = document.querySelector('.performanceTime');
-      if (pt)
+      if (pt) {
         pt.querySelectorAll('line[stroke="orange"]') // remove lines
           .forEach(item => item.remove());
+      }
       let j = 0;
       // plot straight lines
       scoreWarper.maps.forEach((item, i) => {
         if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) &&
           i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
-          let t = item.obs_mean_onset;
-          let screenX = (t - scoreWarper.tmn) / (scoreWarper.tmx - scoreWarper.tmn) *
-            (scoreWarper.lstX - scoreWarper.fstX) + scoreWarper.fstX;
-          screenX = scoreWarper.time2screen(t);
+          screenX = scoreWarper.time2screen(item.obs_mean_onset);
 
-          if (target == 'score')
+          if (target == 'score') {
             addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
-          else
+          } else {
             addLine(pt, screenX, screenX, y1, y2, 'orange');
+          }
         }
       });
     } // drawConnectorLines()
@@ -272,10 +273,14 @@
      */
     function clearAllLines() {
       let pt = document.querySelector('.performanceTime');
-      if (pt) pt.querySelectorAll('line').forEach(item => item.remove());
+      if (pt) {
+        pt.querySelectorAll('line').forEach(item => item.remove());
+      }
       let pm = document.querySelector('.page-margin');
       console.info('clearAllLines pm: ', pm);
-      if (pm) pm.querySelectorAll('line').forEach(item => item.remove());
+      if (pm) {
+        pm.querySelectorAll('line').forEach(item => item.remove());
+      }
     } // clearAllLines()
 
     function loadPerformanceTiming(maps) {
@@ -304,8 +309,9 @@
       // console.info('stSVG: ' + stSVG);
       let scoreTimeDiv = document.getElementById("performanceTime");
       scoreTimeDiv.innerHTML = serializer.serializeToString(ptObj);
-      if (pieceSel && pieceSel.value && perfSel && perfSel.value)
+      if (pieceSel && pieceSel.value && perfSel && perfSel.value) {
         scoreTimeDiv.innerHTML += "<p><b>" + perfSel.value + "</b></p>";
+      }
 
       drawConnectorLines('score');
       drawTimeAxis(document.querySelector('.performanceTime'));
@@ -380,10 +386,11 @@
       // draw tick lines and horizontal axis and label
       for (let t = 0; t <= lastTick; t += tickIncr) {
         (toScreen) ? s = scoreWarper.time2screen(t) : s = scoreWarper.time2svg(t);
-        if (Math.round(t / numbIncr) == t / numbIncr)
+        if (Math.round(t / numbIncr) == t / numbIncr) {
           addLine(g, s, s, y, y + 4, color, 1); // longer tick line
-        else
+        } else {
           addLine(g, s, s, y, y + 2, color, 1); // short tick line
+        }
         if (t == 0) { // draw horizontal axis and axis label
           (toScreen) ? s2 = scoreWarper.time2screen(lastTick) : scoreWarper.time2svg(lastTick);
           addLine(g, s, s2, y, y, color, 1);
@@ -408,7 +415,9 @@
       mapsFileName = fileName;
       console.info("updateMapsFile " + mapsFileName);
       clearAllLines();
-      if (warped) loadMEI(false);
+      if (warped) {
+        loadMEI(false);
+      }
       fetch(mapsFileName)
         .then(response => response.json())
         .then(json => {
