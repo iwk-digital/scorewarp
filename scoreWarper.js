@@ -65,7 +65,7 @@
     this._fstX = this.svg2screen(parseFloat(el1.getAttribute('x')));
 
     let id2 = maps[this.lastOnsetIdx(maps)].xml_id[0];
-    let el2 = this.getElementForId(id2).querySelector('.notehead use');;
+    let el2 = this.getElementForId(id2).querySelector('.notehead use');
     this._lstX = this.svg2screen(parseFloat(el2.getAttribute('x')));
     console.debug('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
 
@@ -119,6 +119,7 @@
       'g.arpeg', // for arpeggios
       'g.beam', // for beams
       'g.hairpin', // for hairpins
+      'g.lineDash', // for ledger lines
       'line', // for red lines
       'path', // for slur, barline, (stem handled by note, staff lines ignored)
       'use[x]', // for many elements
@@ -364,6 +365,19 @@
   } // lastOnsetIdx()
 
   /**
+   * Removes leading hash from string if present
+   * @param {string} hashedString
+   * @returns {string} without leading hash
+   */
+  rmHash(hashedString) {
+    if (hashedString.startsWith('#')) {
+      return hashedString.split('#')[1];
+    } else {
+      return hashedString;
+    }
+  } // rmHash()
+
+  /**
    * Computes the warping function for the note SVG x coordinates,
    * based on the  onset SVG x coordinates and the note SVG x coordinates,
    * stored in the object, and returns an array of warping function values.
@@ -531,16 +545,22 @@
             this.#translate(item, xShift); // translate note in combination w\ existing translate
           }
 
-          // check for ledgerLines
-          let ledgerLines = item.closest('.staff')?.querySelectorAll('.ledgerLines > path');
-          if (ledgerLines && ledgerLines.length > 0 && !item.classList.contains('rest')) {
-            console.debug('shiftElements ledgerLines: ', ledgerLines);
-            ledgerLines.forEach((ledger) => {
-              let boundingBox = ledger.getBBox();
-              if (boundingBox.x < x && boundingBox.x + boundingBox.width > x && ledger.transform.baseVal.length === 0) {
-                this.#addTranslation(ledger, xShift);
-              }
-            });
+          if (false) {
+            // check for ledgerLines
+            let ledgerLines = item.closest('.staff')?.querySelectorAll('.ledgerLines > path');
+            if (ledgerLines && ledgerLines.length > 0 && !item.classList.contains('rest')) {
+              console.debug('shiftElements ledgerLines: ', ledgerLines);
+              ledgerLines.forEach((ledger) => {
+                let boundingBox = ledger.getBBox();
+                if (
+                  boundingBox.x < x &&
+                  boundingBox.x + boundingBox.width > x &&
+                  ledger.transform.baseVal.length === 0
+                ) {
+                  this.#addTranslation(ledger, xShift);
+                }
+              });
+            }
           }
 
           // if within chord & first note in chord, translate stem/artic too
@@ -559,10 +579,26 @@
           let bbox = item.getBBox();
           let x1 = bbox.x;
           let x2 = bbox.x + bbox.width;
-          let xShift1 = warpingFunction[Math.round(x1)]; // delta pixels to shift element
+          let xShift1 = warpingFunction[Math.round(x1)];
           let xShift2 = warpingFunction[Math.round(x2)];
-
           this.#shiftElement(item, x1, x2, xShift1, xShift2);
+        }
+
+        // shift ledger lines
+        else if (
+          item.classList.contains('lineDash') && // is a lineDash class
+          item.closest('.ledgerLines') // within a ledgerLines group
+        ) {
+          // find notes referenced in ledger line element, determine their shift, and apply it to ledger line
+          let referencedNoteIds = item.getAttribute('data-related')?.split(' ');
+          referencedNoteIds.forEach((id) => {
+            let note = this.getElementForId(this.rmHash(id));
+            if (note && !item.hasAttribute('transform')) {
+              let x = note.querySelector('.notehead')?.getBBox().x;
+              let xShift = warpingFunction[Math.round(x)];
+              this.#translate(item, xShift);
+            }
+          });
         }
 
         // slur, barline, staff lines, red debug lines
