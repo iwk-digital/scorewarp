@@ -23,6 +23,9 @@
     const svgNS = "http://www.w3.org/2000/svg";
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
+    let tkOptions = {
+      svgHtml5: true,
+    };
 
     let svgString; // raw SVG text string of engraved MEI file
     let scoreWarper; // score warper object
@@ -69,6 +72,7 @@
       document.getElementById("notation").innerHTML = "<b>Loading Verovio...</b>";
       Module.onRuntimeInitialized = async _ => {
         tk = new verovio.toolkit();
+        tk.setOptions(tkOptions);
         tkVersion = tk.getVersion();
         console.log("Verovio " + tkVersion + ' loaded.');
         document.querySelector('#copyright').innerHTML +=
