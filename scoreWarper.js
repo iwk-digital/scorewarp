@@ -77,7 +77,7 @@
         let note = this.getElementForId(item.xml_id[0]);
         // console.debug(i + '; note: ', note);
         if (note) {
-          // take left side of notes as x value
+          // take center of note heads as x value
           let bbox = note.querySelector('.notehead use')?.getBBox();
           // console.debug('Note BBox: ', bbox);
           let noteX = bbox.x; // + bbox.width / 2;
@@ -379,13 +379,17 @@
 
   /**
    * Computes the warping function for the note SVG x coordinates,
-   * based on the  onset SVG x coordinates and the note SVG x coordinates,
+   * based on the onset SVG x coordinates and the note SVG x coordinates,
    * stored in the object, and returns an array of warping function values.
    *
    * @returns {Array} of warping function values
    */
   computeWarpingArray() {
-    let width = this._svgViewBox[2] - this._svgViewBox[0];
+    let svgWidth = this._svgViewBox[2] - this._svgViewBox[0];
+    let noteheadWidths = Array.from(this._svgObj.querySelectorAll('.notehead use')).map(
+      (notehead) => notehead.getBBox().width
+    );
+    let noteheadWidthHalf = this.median(noteheadWidths) / 2;
     // console.debug('onsetSVGXs, ', onsetSVGXs);
     // console.debug('noteSVGXs, ', noteSVGXs);
     // console.debug('noteXs, ', noteXs);
@@ -394,12 +398,12 @@
     let warpArr = [];
     let [j, lastX, lastDiff, currDiff, ip, lastIp] = [0, 0, 0, 0, 0, 0];
     // go through all x values of the SVG and compute an interpolation value ip for each x
-    for (let currX = 0; currX < width; currX++) {
+    for (let currX = 0; currX < svgWidth; currX++) {
       if (this._noteSVGXs[j] <= currX) {
         lastX = currX;
         j++; // increment j, index into noteSVGXs
       }
-      if (j <= 0 || j >= width) {
+      if (j <= 0 || j >= svgWidth) {
         ip = lastIp;
       } else {
         lastDiff = this._onsetSVGXs[j - 1] - this._noteSVGXs[j - 1]; // last Diff (onset minus note x)
@@ -409,14 +413,14 @@
         ip = lerp(lastDiff, currDiff, (currX - lastX) / (this._noteSVGXs[j] - this._noteSVGXs[j - 1]));
         if (!ip) ip = lastIp;
       }
-      warpArr.push(ip);
+      warpArr.push(ip); // - noteheadWidthHalf); // store the warping function value
       lastIp = ip;
       // console.debug('x: ', x + ', j:' + j + ', ' + v1 + '/' + v2 + ', ip:' + ip);
     }
     return warpArr;
 
+    // linear interpolation; t from v0 to v1 - 1
     function lerp(v0, v1, t) {
-      // linear interpolation; t from 0 to lgt - 1
       return (1 - t) * v0 + t * v1;
     }
   } // computeWarpingArray()
@@ -448,12 +452,12 @@
   #shiftElements(selectorList, warpingFunction) {
     for (let selector of selectorList) {
       let list = this._svgObj.querySelectorAll(selector);
-      console.debug('XXXXXXX Shifting ' + list.length + ' ' + selector + ' elements.');
+      console.debug('Shshshshshshshifting ' + list.length + ' ' + selector + ' elements.');
 
       list.forEach((item) => {
         // g.arpeg
         if (item.nodeName == 'g' && item.classList.contains('arpeg')) {
-          let x = item.getBBox().x; // + item.getBBox().width / 2;
+          let x = item.getBBox().x;
           let xShift = warpingFunction[Math.round(x)];
           console.debug('shiftElements ARPEG: ', item);
           this.#addTranslation(item, xShift);
@@ -474,7 +478,7 @@
             // console.debug('SSSSSSSSS Noteheads within beam ', noteheads);
 
             // look for all stems within the beam and find closest left and right stem
-            stems.forEach((stem, i) => {
+            stems.forEach((stem) => {
               let stemX = stem.getBBox().x;
               let threshold = 12; // SVG px
               if (Math.abs(stemX - boundingBox.x) < threshold) leftStem = stem;
@@ -524,7 +528,7 @@
         // g.note (g.chord) / g.rest
         else if (item.nodeName == 'g' && (item.classList.contains('note') || item.classList.contains('rest'))) {
           // determine x value of notehead
-          let x = item.getBBox().x; // + item.getBBox().width / 2;
+          let x = item.getBBox().x;
           if (item.classList.contains('note')) {
             // for notes, use notehead x value (to avoid incorrect shifting with accidentals)
             x = item.querySelector('.notehead use').getBBox().x;
@@ -543,34 +547,6 @@
             }
           } else {
             this.#translate(item, xShift); // translate note in combination w\ existing translate
-          }
-
-          if (false) {
-            // check for ledgerLines
-            let ledgerLines = item.closest('.staff')?.querySelectorAll('.ledgerLines > path');
-            if (ledgerLines && ledgerLines.length > 0 && !item.classList.contains('rest')) {
-              console.debug('shiftElements ledgerLines: ', ledgerLines);
-              ledgerLines.forEach((ledger) => {
-                let boundingBox = ledger.getBBox();
-                if (
-                  boundingBox.x < x &&
-                  boundingBox.x + boundingBox.width > x &&
-                  ledger.transform.baseVal.length === 0
-                ) {
-                  this.#addTranslation(ledger, xShift);
-                }
-              });
-            }
-          }
-
-          // if within chord & first note in chord, translate stem/artic too
-          if (false && chord && chord.querySelector('.note').getAttribute('id') === item.getAttribute('id')) {
-            let stem = chord.querySelector('.stem');
-            if (stem) this.#translate(stem, xShift);
-            let artics = chord.querySelectorAll('.artic');
-            if (artics) artics.forEach((item) => this.#translate(item, xShift));
-            let dots = chord.querySelectorAll('.dots');
-            if (dots) dots.forEach((item) => this.#translate(item, xShift));
           }
         }
 
@@ -594,14 +570,17 @@
           referencedNoteIds.forEach((id) => {
             let note = this.getElementForId(this.rmHash(id));
             if (note && !item.hasAttribute('transform')) {
-              let x = note.querySelector('.notehead')?.getBBox().x;
-              let xShift = warpingFunction[Math.round(x)];
-              this.#translate(item, xShift);
+              let notehead = note.querySelector('.notehead');
+              if (notehead) {
+                let x = notehead.getBBox().x;
+                let xShift = warpingFunction[Math.round(x)];
+                this.#translate(item, xShift);
+              }
             }
           });
         }
 
-        // slur, barline, staff lines, red debug lines
+        // slur, barline, staff lines
         else if (item.nodeName == 'path') {
           if (!item.closest('.note, .chord, .ledgerLines')) {
             let bbox = item.getBBox();
@@ -646,8 +625,7 @@
               attribute = 'cx';
             }
             let x = parseFloat(item.getAttribute(attribute));
-            let xShift = 0;
-            xShift = warpingFunction[Math.round(x)];
+            let xShift = warpingFunction[Math.round(x)];
             item.setAttribute(attribute, x + xShift);
           }
         }
