@@ -8,9 +8,9 @@
   <!-- <script src="http://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js" defer></script> -->
   <!-- <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js" defer></script> -->
   <script src="https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js" defer></script>
-  
+
   <script src="./demo.js"></script>
-  <script src="./scoreWarper.js"  ></script>
+  <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
   <script>
 
@@ -242,13 +242,19 @@
      */
     function drawLinesInScore() {
       let pageMarginElement = document.querySelector('.page-margin');
+      let lineContainer = pageMarginElement.querySelector('.lineContainer');
+      if (!lineContainer) {
+        lineContainer = document.createElementNS(svgNS, 'g');
+        lineContainer.classList.add('lineContainer');
+        pageMarginElement.appendChild(lineContainer);
+      }
       if (!warped) {
         scoreWarper.noteSVGXs.forEach(item => {
-          addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
         });
       } else { // this is for warped notes, probably never called
         scoreWarper.onsetSVGXs.forEach(item => {
-          addLine(pageMarginElement, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
         });
       }
     } // drawLinesInScore()
