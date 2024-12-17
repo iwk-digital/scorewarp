@@ -140,6 +140,8 @@
       notationDiv.appendChild(scoreWarper.svgObj);
       // console.log('NotationDiv: ', notationDiv);
 
+      scoreWarper.shiftPageMargin();
+
       // list all warpable elements of score
       elementList = scoreWarper.svgObj.querySelector('.page-margin').querySelectorAll(
         'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
@@ -243,12 +245,18 @@
     function drawLinesInScore() {
       let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
       if (definitionScaleElement) {
-        let transform = definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
+        let transforms = definitionScaleElement.querySelector('.page-margin')?.transform;
+        //definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
         let lineContainer = definitionScaleElement.querySelector('.lineContainer');
         if (!lineContainer) {
           lineContainer = document.createElementNS(svgNS, 'g');
           lineContainer.classList.add('lineContainer');
-          lineContainer.setAttribute('transform', transform);
+
+          let matrix = transforms.baseVal.getItem(0).matrix;
+          let newTranslate = scoreWarper._svgObj.createSVGTransform();
+          newTranslate.setTranslate(matrix.e + scoreWarper.noteheadWidth / 2, 0);
+          lineContainer.transform.baseVal.appendItem(newTranslate);
+
           definitionScaleElement.appendChild(lineContainer);
         }
         if (!warped) {

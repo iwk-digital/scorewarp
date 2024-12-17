@@ -49,6 +49,25 @@ class ScoreWarper {
     } // init()
 
     /**
+     * Shift the page-margin group by half a notehead width to the left
+     */
+    shiftPageMargin() {
+        let pageMarginElement = this._svgObj.querySelector('.page-margin');
+        let transformations = pageMarginElement.transform.baseVal;
+
+        // get notehead width
+        let noteheadWidths =
+            Array.from(this._svgObj.querySelectorAll('.notehead'))
+                .map(
+                    (notehead) => notehead.getBBox().width
+                );
+        this._noteheadWidth = this.median(noteheadWidths);
+
+        // shift page margin by half a notehead width to the left
+        transformations.getItem(0).matrix.e = this._pageMarginX - this._noteheadWidth / 2;
+    } // shiftPageMargin()    
+
+    /**
      * Scans maps file content and calculates the coordinates for
      * time, screen, and SVG. To be called, when new maps file content is loaded.
      * @param {Object} maps
@@ -201,6 +220,13 @@ class ScoreWarper {
     get noteSVGXs() {
         return this._noteSVGXs;
     }
+
+    /**
+     * Get noteheadWidth
+     */
+    get noteheadWidth() {   
+        return this._noteheadWidth;
+    } // get noteheadWidth()
 
     /**
      * Get onsetSVGXs (SVG x values of onset times)
@@ -388,10 +414,6 @@ class ScoreWarper {
      */
     computeWarpingArray() {
         let svgWidth = this._svgViewBox[2] - this._svgViewBox[0];
-        let noteheadWidths = Array.from(this._svgObj.querySelectorAll('.notehead use')).map(
-            (notehead) => notehead.getBBox().width
-        );
-        let noteheadWidthHalf = this.median(noteheadWidths) / 2;
         // console.debug('onsetSVGXs, ', onsetSVGXs);
         // console.debug('noteSVGXs, ', noteSVGXs);
         // console.debug('noteXs, ', noteXs);
