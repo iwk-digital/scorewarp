@@ -238,24 +238,28 @@
     } // drawConnectorLines()
 
     /**
-     * Draws red lines inside SVG (for debugging)
+     * Draws red lines inside SVG (for debugging) into a separate line container group
      */
     function drawLinesInScore() {
-      let pageMarginElement = document.querySelector('.page-margin');
-      let lineContainer = pageMarginElement.querySelector('.lineContainer');
-      if (!lineContainer) {
-        lineContainer = document.createElementNS(svgNS, 'g');
-        lineContainer.classList.add('lineContainer');
-        pageMarginElement.appendChild(lineContainer);
-      }
-      if (!warped) {
-        scoreWarper.noteSVGXs.forEach(item => {
-          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-        });
-      } else { // this is for warped notes, probably never called
-        scoreWarper.onsetSVGXs.forEach(item => {
-          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-        });
+      let pageMarginElement = scoreWarper.svgObj.querySelector('.definition-scale');
+      if (pageMarginElement) {
+        let transform = pageMarginElement.querySelector('.page-margin')?.getAttribute('transform');
+        let lineContainer = pageMarginElement.querySelector('.lineContainer');
+        if (!lineContainer) {
+          lineContainer = document.createElementNS(svgNS, 'g');
+          lineContainer.classList.add('lineContainer');
+          lineContainer.setAttribute('transform', transform);
+          pageMarginElement.appendChild(lineContainer);
+        }
+        if (!warped) {
+          scoreWarper.noteSVGXs.forEach(item => {
+            addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+          });
+        } else { // this is for warped notes, probably never called
+          scoreWarper.onsetSVGXs.forEach(item => {
+            addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+          });
+        }
       }
     } // drawLinesInScore()
 
