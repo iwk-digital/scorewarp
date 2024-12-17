@@ -170,6 +170,9 @@
       }
     } // keyboardListener()
 
+    /**
+     * Warps the score to match the performed events.
+     */
     function warp() {
       if (!scoreWarper.noteSVGXs) {
         return;
@@ -187,10 +190,13 @@
       }
     } // warp()
 
+    /**
+     * Warps the notes inside chords to match the performed notes.
+     */
     function warpNotes() {
       if (warped) {
         // clear download link element
-        document.getElementById("downloadLink").innerHTML = "";
+        document.getElementById('downloadLink').innerHTML = '';
 
         scoreWarper.warpIndividualNotes();
 
@@ -205,7 +211,10 @@
     let y2 = 0; // y of orange connector lines
     let yMx = 200; // mx y of performance panel
 
-    // draw orange lines, to connect to 'score' or to performed 'notes'
+    /**
+     * Draw orange lines, to connect to 'score' or to performed 'notes'
+     * @param {string} target - 'score' or 'notes'
+     */
     function drawConnectorLines(target = 'score') { // 'chords', 'notes'
       let pt = document.querySelector('.performanceTime');
       if (pt) {
@@ -219,7 +228,7 @@
           i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
           screenX = scoreWarper.time2screen(item.obs_mean_onset);
 
-          if (target == 'score') {
+          if (target === 'score') {
             addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
           } else {
             addLine(pt, screenX, screenX, y1, y2, 'orange');
