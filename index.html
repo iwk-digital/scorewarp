@@ -19,7 +19,7 @@
     let meiFileName = '';
     let mapsFileName = '';
 
-    const dateString = 'debug version, 11 December 2024 – ' + Date.now();
+    const dateString = 'debug version, 17 December 2024 – ' + Date.now();
     const svgNS = "http://www.w3.org/2000/svg";
     let tk; // toolkit instance
     let tkVersion = ''; // toolkit version string
@@ -241,15 +241,15 @@
      * Draws red lines inside SVG (for debugging) into a separate line container group
      */
     function drawLinesInScore() {
-      let pageMarginElement = scoreWarper.svgObj.querySelector('.definition-scale');
-      if (pageMarginElement) {
-        let transform = pageMarginElement.querySelector('.page-margin')?.getAttribute('transform');
-        let lineContainer = pageMarginElement.querySelector('.lineContainer');
+      let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
+      if (definitionScaleElement) {
+        let transform = definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
+        let lineContainer = definitionScaleElement.querySelector('.lineContainer');
         if (!lineContainer) {
           lineContainer = document.createElementNS(svgNS, 'g');
           lineContainer.classList.add('lineContainer');
           lineContainer.setAttribute('transform', transform);
-          pageMarginElement.appendChild(lineContainer);
+          definitionScaleElement.appendChild(lineContainer);
         }
         if (!warped) {
           scoreWarper.noteSVGXs.forEach(item => {
