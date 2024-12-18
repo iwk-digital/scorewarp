@@ -1,8 +1,18 @@
+/**
+ * @file gui.js
+ * @description
+ * This file contains the main functions for the GUI of the warp tool.
+ * 
+ */
+
+// Default variables
+const dateString = 'Demo version, 18 December 2024';
+const svgNS = "http://www.w3.org/2000/svg";
+
 let meiFileName = '';
 let mapsFileName = '';
 
-const dateString = 'Demo version, 18 December 2024 – ' + Date.now();
-const svgNS = "http://www.w3.org/2000/svg";
+// Verovio toolkit variables
 let tk; // toolkit instance
 let tkVersion = ''; // toolkit version string
 let tkOptions = {
@@ -11,10 +21,9 @@ let tkOptions = {
 
 let svgString; // raw SVG text string of engraved MEI file
 let scoreWarper; // score warper object
-let elementList; // a nodeList of elements that need to be warped
-let warped = false;
-var pieceSel;
-var perfSel;
+let warped = false; // whether or not the score has been warped
+let pieceSel; // selection element for pieces
+let perfSel; // selection element for performances
 
 /**
  * This function is called when the DOM is fully loaded.
@@ -25,7 +34,7 @@ var perfSel;
  * @returns {void}
  * @description
  */
-document.addEventListener("DOMContentLoaded", (event) => {
+document.addEventListener("DOMContentLoaded", ( ) => {
     // read default files from demo.js
     if (defaultMeiFileName) {
         meiFileName = defaultMeiFileName;
@@ -124,13 +133,6 @@ function updateGUI() {
 
     scoreWarper.shiftPageMargin();
 
-    // list all warpable elements of score
-    elementList = scoreWarper.svgObj.querySelector('.page-margin').querySelectorAll(
-        'g.note, g.arpeg, :not(g.notehead):not(g.arpeg)>use[x], rect[x], text[x], polygon, ellipse, circle, path');
-    // 'g.chord, :not(g.chord)>g.note, use[x], rect[x], text[x], polygon,
-    // ellipse, circle, path');
-    // console.log('elementList: ', elementList);
-
     if (pieceSel && pieceSel.value && perfSel && perfSel.value &&
         demoFiles[pieceSel.value].performances[perfSel.value]) {
         updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
@@ -147,7 +149,7 @@ function updateGUI() {
  */
 function keyboardListener(e) {
     if (e.code == 'KeyW') warp(); // warp score to match performed events
-    if (e.code == 'KeyA') warpNotes(); // warp score to match performed notes
+    if (e.code == 'KeyA') warpIndividualNotes(); // warp score to match performed notes
     if (e.code == "KeyC") loadMEI(false); // reload MEI file
     if (e.code == "KeyD" && scoreWarper.svgObj) { // create SVG download link
         createSVGDownloadLink();
@@ -177,7 +179,7 @@ function warp() {
 /**
  * Warps the notes inside chords to match the performed notes.
  */
-function warpNotes() {
+function warpIndividualNotes() {
     if (warped) {
         // clear download link element
         document.getElementById('downloadLink').innerHTML = '';
@@ -188,12 +190,13 @@ function warpNotes() {
     } else {
         console.info('Please warp the score first.');
     }
-} // warpNotes()
+} // warpIndividualNotes()
 
-let y0basis = 180; // y of time axis
+// basic drawing coordinates
+let y0basis = 120; // y of time axis
 let y1 = 80; // y of straigth lines
 let y2 = 0; // y of orange connector lines
-let yMx = 200; // mx y of performance panel
+let yMx = 130; // mx y of performance panel
 
 /**
  * Draw orange lines, to connect to 'score' or to performed 'notes'
@@ -292,6 +295,10 @@ function clearAllLines() {
     }
 } // clearAllLines()
 
+/**
+ * 
+ * @param {Object} maps 
+ */
 function loadPerformanceTiming(maps) {
     scoreWarper.maps = maps;
 
@@ -336,46 +343,12 @@ function loadPerformanceTiming(maps) {
 } // loadPerformanceTiming()
 
 // Create SVG for score time plotting
-function createScoreTimeSVG(width, height,) {
+function createScoreTimeSVG(width, height) {
     const stSVG = document.createElementNS(svgNS, 'svg');
     stSVG.setAttribute('width', width);
     stSVG.setAttribute('height', height);
     return stSVG;
-}
-
-function addLine(node, x1, x2, y1, y2, color = "black", strokeWidth = 1) {
-    const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('x1', x1);
-    line.setAttribute('x2', x2);
-    line.setAttribute('y1', y1);
-    line.setAttribute('y2', y2);
-    line.setAttribute('stroke-width', strokeWidth);
-    line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('stroke', color);
-    return node.appendChild(line);
-}
-
-function addCircle(node, cx, cy, r, color = "black", strokeWidth = 1) {
-    const circle = document.createElementNS(svgNS, 'circle');
-    circle.setAttribute('cx', cx);
-    circle.setAttribute('cy', cy);
-    circle.setAttribute('r', r);
-    circle.setAttribute('stroke-width', strokeWidth);
-    circle.setAttribute('stroke', color);
-    return node.appendChild(circle);
-}
-
-function addText(node, text, x, y, halign = "middle", color = "black") {
-    let txt = document.createElementNS(svgNS, 'text');
-    txt.setAttribute('text-anchor', halign);
-    txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
-    txt.setAttribute('font-size', 10.5);
-    txt.setAttribute('fill', color);
-    txt.setAttribute('x', x);
-    txt.setAttribute('y', y);
-    txt.appendChild(document.createTextNode(text));
-    return node.appendChild(txt);
-}
+} // createScoreTimeSVG()
 
 /**
  * Draws time axis to a given node
@@ -483,4 +456,38 @@ function createSVGDownloadLink() {
         }
         a.download = svgName;
     }
-}
+} // createSVGDownloadLink()
+
+function addLine(node, x1, x2, y1, y2, color = "black", strokeWidth = 1) {
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y1', y1);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke-width', strokeWidth);
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('stroke', color);
+    return node.appendChild(line);
+} // addLine()
+
+function addCircle(node, cx, cy, r, color = "black", strokeWidth = 1) {
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('stroke-width', strokeWidth);
+    circle.setAttribute('stroke', color);
+    return node.appendChild(circle);
+} // addCircle()
+
+function addText(node, text, x, y, halign = "middle", color = "black") {
+    let txt = document.createElementNS(svgNS, 'text');
+    txt.setAttribute('text-anchor', halign);
+    txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+    txt.setAttribute('font-size', 10.5);
+    txt.setAttribute('fill', color);
+    txt.setAttribute('x', x);
+    txt.setAttribute('y', y);
+    txt.appendChild(document.createTextNode(text));
+    return node.appendChild(txt);
+} // addText()

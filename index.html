@@ -3,23 +3,17 @@
 <head>
   <meta charset="utf-8">
   <link rel="icon" href="https://www.mdw.ac.at/favicon.ico">
-  <!-- Access-Control-Allow-Origin: https://iwk.mdw.ac.at -->
-
+ 
+  <!-- Load Verovio toolkit -->
   <!-- <script src="http://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js" defer></script> -->
   <!-- <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js" defer></script> -->
   <script src="https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js" defer></script>
 
-  <script src="gui.js"></script>
+  <!-- Load the script files -->
+  <script src="./gui.js" type="module"></script>
   <script src="./demo.js"></script>
   <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
-  <script>
-
-    // TODO DEBUG: accept user files
-
-
-    //
-  </script>
 </head>
 
 <body style="font-family:Arial, Helvetica, sans-serif">
@@ -35,7 +29,7 @@
     <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
   </form>
   <button onclick="warp()">1) Warp [W]</button>
-  <button onclick="warpNotes()">2) Warp notes inside chords [A]</button>
+  <button onclick="warpIndividualNotes()">2) Warp notes inside chords [A]</button>
   <button onclick="loadMEI(false)">3) Reload data [C]</button>
   <button onclick="createSVGDownloadLink()">4) Create SVG Download [D]</button>
   <a href id="downloadLink"></a>
@@ -45,7 +39,9 @@
   </div>
   <div id="performanceTime" class="presentationPanel"></div>
   <p id="copyright" style="font-size:xx-small;">
-    <a href="https://iwk.mdw.ac.at/goebl/">Werner Goebl</a>, <span id="date"></span>.
+    <a href="https://iwk.mdw.ac.at/goebl/" target="_blank">Werner Goebl</a>,
+    <a href="https://www.mdw.ac.at/iwk/david-weigl/" target="_blank">David M. Weigl</a>,
+    <span id="date"></span>.
   </p>
 </body>
 
