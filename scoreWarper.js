@@ -26,7 +26,7 @@ class ScoreWarper {
         this._noteXs = []; // x values of notes on screen
         this._noteSVGXs = []; // x values of notes in SVG
         this._onsetSVGXs = []; // SVG x values of onset times
-        this._elementList; // a nodeList of elements that need to be warped   }; // constructor()
+        this._elementList; // a nodeList of elements that need to be warped
         this._timeWarpingFunction; // store the time warping function
 
         this._fstX = 0; // first note screen x
@@ -34,39 +34,22 @@ class ScoreWarper {
         this._tmn = 0; // global min onset time
         this._tmx = 0; // global max onset time
 
+        // SVG object properties
         this._svgWidth = parseFloat(this._svgObj.getAttribute('width'));
         this._svgHeight = parseFloat(this._svgObj.getAttribute('height'));
         this._svgViewBox = this._svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
         this._svgViewBox = this._svgViewBox.split(' ').map(Number);
         let pageMarginElement = this._svgObj.querySelector('.page-margin');
         let transformations = pageMarginElement.transform.baseVal;
+        this._pageMarginX = transformations.getItem(0).matrix.e;
+
+        // console output
         console.debug('svgObj: ', this._svgObj);
         console.debug('svgObj width: ', this._svgWidth);
         console.debug('svgObj viewBox: ', this._svgViewBox);
         console.debug('svgObj transform: ', pageMarginElement.transform);
         console.debug('svgObj transform bsVl: ', transformations.getItem(0));
-        this._pageMarginX = transformations.getItem(0).matrix.e;
     } // init()
-
-    /**
-     * Shift the page-margin group by half a notehead width to the left 
-     * (quick hack to center the lines on noteheads)
-     */
-    shiftPageMargin() {
-        let pageMarginElement = this._svgObj.querySelector('.page-margin');
-        let transformations = pageMarginElement.transform.baseVal;
-
-        // get notehead width
-        let noteheadWidths =
-            Array.from(this._svgObj.querySelectorAll('.notehead'))
-                .map(
-                    (notehead) => notehead.getBBox().width
-                );
-        this._noteheadWidth = this.median(noteheadWidths);
-
-        // shift page margin by half a notehead width to the left
-        transformations.getItem(0).matrix.e = this._pageMarginX - this._noteheadWidth / 2;
-    } // shiftPageMargin()    
 
     /**
      * Scans maps file content and calculates the coordinates for
@@ -126,6 +109,26 @@ class ScoreWarper {
     } // loadMaps()
 
     /**
+     * Shift the page-margin group by half a notehead width to the left 
+     * (quick hack to center the lines on noteheads)
+     */
+    shiftPageMargin() {
+        let pageMarginElement = this._svgObj.querySelector('.page-margin');
+        let transformations = pageMarginElement.transform.baseVal;
+
+        // get notehead width
+        let noteheadWidths =
+            Array.from(this._svgObj.querySelectorAll('.notehead'))
+                .map(
+                    (notehead) => notehead.getBBox().width
+                );
+        this._noteheadWidth = this.median(noteheadWidths);
+
+        // shift page margin by half a notehead width to the left
+        transformations.getItem(0).matrix.e = this._pageMarginX - this._noteheadWidth / 2;
+    } // shiftPageMargin()    
+
+    /**
      * Warps the score SVG object to the given time warping function
      * @param {Object} maps (optional) maps file content, if empty,
      * the current maps file content is used
@@ -141,7 +144,7 @@ class ScoreWarper {
             'g.arpeg', // for arpeggios
             'g.beam', // for beams
             'g.hairpin', // for hairpins
-            'g.lineDash', // for ledger lines
+            'g.lineDash', // for ledger lines (svgHtml5 option for Verovio toolkit)
             'line', // for red lines
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
             'use[x]', // for many elements
@@ -187,6 +190,10 @@ class ScoreWarper {
             }
         });
     } // adjustIndividualNotes()
+ 
+    //#endregion Control Methods
+
+    
 
     //#region Getters
 
@@ -195,115 +202,111 @@ class ScoreWarper {
      */
     get fstX() {
         return this._fstX;
-    }
+    } // get fstX()
 
     /**
      * Get lstX (last note screen x) in the maps file
      */
     get lstX() {
         return this._lstX;
-    }
+    } // get lstX()
 
     /**
      * Get the maps file content
      */
     get maps() {
         return this._maps;
-    }
+    } // get maps()
+
+    /**
+     * Get noteheadWidth
+     */
+    get noteheadWidth() {
+        return this._noteheadWidth;
+    } // get noteheadWidth()
 
     /**
      * Get noteXs (x values of notes on screen)
      */
     get noteXs() {
         return this._noteXs;
-    }
+    } // get noteXs()
 
     /**
      * Get noteSVGXs (x values of notes in SVG)
      */
     get noteSVGXs() {
         return this._noteSVGXs;
-    }
-
-    /**
-     * Get noteheadWidth
-     */
-    get noteheadWidth() {   
-        return this._noteheadWidth;
-    } // get noteheadWidth()
+    } // get noteSVGXs()
 
     /**
      * Get onsetSVGXs (SVG x values of onset times)
      */
     get onsetSVGXs() {
         return this._onsetSVGXs;
-    }
+    } // get onsetSVGXs()
 
     /**
      * Get page margin X coordinate
      */
     get pageMarginX() {
         return this._pageMarginX;
-    }
-
-    /**
-     * Get the SVG width
-     */
-    get svgWidth() {
-        return this._svgWidth;
-    }
+    } // get pageMarginX()
 
     /**
      * Get the SVG height
      */
     get svgHeight() {
         return this._svgHeight;
-    }
+    } // get svgHeight()
 
     /**
      * Get the original SVG object
      */
     get svgObj() {
         return this._svgObj;
-    }
+    } // get svgObj()
 
     /**
      * Get the SVG viewBox
      */
     get svgViewBox() {
         return this._svgViewBox;
-    }
+    } // get svgViewBox()
+
+    /**
+     * Get the SVG width
+     */
+    get svgWidth() {
+        return this._svgWidth;
+    } // get svgWidth()
 
     /**
      * Get the time warping function
      */
     get timeWarpingFunction() {
         return this._timeWarpingFunction;
-    }
+    } // get timeWarpingFunction()
 
     /**
      * Get tmn (global min onset time) in the maps file
      */
     get tmn() {
         return this._tmn;
-    }
+    } // get tmn()
 
     /**
      * Get tmx (global max onset time) in the maps file
      */
     get tmx() {
         return this._tmx;
-    }
+    } // get tmx()
+
+    //#endregion Getters
+
+
 
     //#region Setters
-
-    /**
-     * Set svgObj (the SVG element)
-     */
-    set svgObj(svgObj) {
-        this._svgObj = svgObj;
-        this.init();
-    }
 
     /**
      * Set the maps file content and compute coordinates for time, screen, and SVG
@@ -314,100 +317,25 @@ class ScoreWarper {
     } // set maps()
 
     /**
+     * Set svgObj (the SVG element)
+     */
+    set svgObj(svgObj) {
+        this._svgObj = svgObj;
+        this.init();
+    } // set svgObj()
+
+    /**
      * Set the time warping function
      */
     set timeWarpingFunction(timeWarpingFunction) {
         this._timeWarpingFunction = timeWarpingFunction;
-    }
+    } // set timeWarpingFunction()
 
     //#endregion Setters
 
+
+
     //#region Helper Methods
-
-    /**
-     * Returns the SVG element for a given id, based either on the id or the data-id attribute
-     * @param {string} id
-     * @returns
-     */
-    getElementForId(id) {
-        let el = this._svgObj.querySelector(`[*|id="${id}"]`);
-        if (!el) {
-            el = this._svgObj.querySelector(`[data-id="${id}"]`);
-        }
-        return el;
-    } // getElementForId()
-
-    /**
-     * Converts time in seconds to screen coordinate x values
-     * @param {number} t time in secods
-     */
-    time2screen(t) {
-        // return (t - this._tmn) / (this._tmx - this._tmn) * (this._lstX - this._fstX) + this._fstX;
-        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
-        let xRatio = this._lstX - this._fstX;
-        return timeRatio * xRatio + this._fstX;
-    } // time2screen()
-
-    /**
-     * Converts time in seconds to svg x coordinates inside pageMargin
-     * @param {number} t
-     * @returns
-     */
-    time2svg(t) {
-        // return (t - this._tmn) / (this._tmx - this._tmn) *
-        //     (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]) + this._noteSVGXs[0];
-        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
-        let svgWidth = this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0];
-        return timeRatio * svgWidth + this._noteSVGXs[0];
-    } // time2svg()
-
-    /**
-     * Converts SVG x coordinates into screen x coordinates
-     * @param {number} x
-     * @returns
-     */
-    svg2screen(x) {
-        let newX = (x + this._pageMarginX) * this._svgWidth;
-        let viewBoxWidth = this._svgViewBox[2] - this._svgViewBox[0];
-        return newX / viewBoxWidth;
-    } // svg2screen()
-
-    /**
-     * Returns first onset index in the maps file
-     * @param {Object} maps
-     * @returns
-     */
-    firstOnsetIdx(maps) {
-        let i = 0;
-        while (maps[i].obs_mean_onset < 0) i++;
-        // console.debug('getFirstOnsetIdx i: ' + i);
-        return i;
-    } // firstOnsetIdx()
-
-    /**
-     * Returns last onset index in the maps file
-     * @param {Object} maps
-     * @returns
-     */
-    lastOnsetIdx(maps) {
-        let i = maps.length - 1;
-        while (maps[i].xml_id[0].includes('trompa')) i--;
-        // console.debug('getLastOnsetIdx i: ' + i);
-        return i;
-    } // lastOnsetIdx()
-
-    /**
-     * Removes leading hash from string if present
-     * @param {string} hashedString
-     * @returns {string} without leading hash
-     */
-    rmHash(hashedString) {
-        if (hashedString.startsWith('#')) {
-            return hashedString.split('#')[1];
-        } else {
-            return hashedString;
-        }
-    } // rmHash()
 
     /**
      * Computes the warping function for the note SVG x coordinates,
@@ -454,6 +382,43 @@ class ScoreWarper {
     } // computeWarpingArray()
 
     /**
+     * Returns first onset index in the maps file
+     * @param {Object} maps
+     * @returns
+     */
+    firstOnsetIdx(maps) {
+        let i = 0;
+        while (maps[i].obs_mean_onset < 0) i++;
+        // console.debug('getFirstOnsetIdx i: ' + i);
+        return i;
+    } // firstOnsetIdx()
+
+    /**
+     * Returns the SVG element for a given id, based either on the id or the data-id attribute
+     * @param {string} id
+     * @returns
+     */
+    getElementForId(id) {
+        let el = this._svgObj.querySelector(`[*|id="${id}"]`);
+        if (!el) {
+            el = this._svgObj.querySelector(`[data-id="${id}"]`);
+        }
+        return el;
+    } // getElementForId()
+
+    /**
+     * Returns last onset index in the maps file
+     * @param {Object} maps
+     * @returns
+     */
+    lastOnsetIdx(maps) {
+        let i = maps.length - 1;
+        while (maps[i].xml_id[0].includes('trompa')) i--;
+        // console.debug('getLastOnsetIdx i: ' + i);
+        return i;
+    } // lastOnsetIdx()
+
+    /**
      * Computes the median of an array of numbers
      * @param {Array[Number]} numbers
      * @returns {Number} median
@@ -469,7 +434,114 @@ class ScoreWarper {
         return sorted[middle];
     } // median()
 
+    /**
+     * Removes leading hash from string if present
+     * @param {string} hashedString
+     * @returns {string} without leading hash
+     */
+    rmHash(hashedString) {
+        if (hashedString.startsWith('#')) {
+            return hashedString.split('#')[1];
+        } else {
+            return hashedString;
+        }
+    } // rmHash()
+
+    /**
+     * Converts SVG x coordinates into screen x coordinates
+     * @param {number} x
+     * @returns
+     */
+    svg2screen(x) {
+        let newX = (x + this._pageMarginX) * this._svgWidth;
+        let viewBoxWidth = this._svgViewBox[2] - this._svgViewBox[0];
+        return newX / viewBoxWidth;
+    } // svg2screen()
+
+    /**
+     * Converts time in seconds to screen coordinate x values
+     * @param {number} t time in secods
+     */
+    time2screen(t) {
+        // return (t - this._tmn) / (this._tmx - this._tmn) * (this._lstX - this._fstX) + this._fstX;
+        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
+        let xRatio = this._lstX - this._fstX;
+        return timeRatio * xRatio + this._fstX;
+    } // time2screen()
+
+    /**
+     * Converts time in seconds to svg x coordinates inside pageMargin
+     * @param {number} t
+     * @returns
+     */
+    time2svg(t) {
+        // return (t - this._tmn) / (this._tmx - this._tmn) *
+        //     (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]) + this._noteSVGXs[0];
+        let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
+        let svgWidth = this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0];
+        return timeRatio * svgWidth + this._noteSVGXs[0];
+    } // time2svg()
+
+    //#endregion Helper Methods
+
+
+
     //#region Shifting Methods
+
+    /**
+     * Add a translation to an element node
+     * @param {Element} element
+     * @param {number} delta
+     * @param {Boolean} clearTransforms
+     */
+    #addTranslation(element, delta, clearTransforms = false) {
+        if (clearTransforms) element.transform.baseVal.clear();
+        let newTranslate = this._svgObj.createSVGTransform();
+        newTranslate.setTranslate(delta, 0);
+        element.transform.baseVal.insertItemBefore(newTranslate, 0);
+    } // addTranslation()
+
+    /**
+     * Shifts element across the x-axis by adding a translation and a scale transformation to it.
+     * @param {Element} element
+     * @param {number} x1 first x coordinate
+     * @param {number} x2 last x coordinate
+     * @param {number} xShift1 x shift for x1
+     * @param {number} xShift2 x shift for x2
+     */
+    #shiftElement(element, x1, x2, xShift1, xShift2, verbose = false) {
+        let xScale = (x2 + xShift2 - (x1 + xShift1)) / (x2 - x1);
+        if (verbose) {
+            console.log(
+                '#shiftElement x1/x2: ' +
+                x1 +
+                '/' +
+                x2 +
+                ', xShift1/xShift2: ' +
+                xShift1 +
+                '/' +
+                xShift2 +
+                ', xScale: ' +
+                xScale
+            );
+        }
+
+        // add a transformation, if none exists
+        let transformList = element.transform.baseVal; // SVGTransformList
+        if (transformList.length === 0) {
+            if (xShift1 && xShift1 < Infinity) {
+                const translate = this._svgObj.createSVGTransform();
+                translate.setTranslate(xShift1, 0);
+                transformList.appendItem(translate);
+            }
+            element.setAttribute('transform-origin', x1);
+            if (xScale && xScale < Infinity && xScale > 0) {
+                const scale = this._svgObj.createSVGTransform();
+                scale.setScale(xScale, 1);
+                transformList.appendItem(scale);
+            }
+        }
+    } // shiftElement()
 
     /**
      * Shifts elements in selector list horizontally by modifying all x coordinates using
@@ -694,66 +766,4 @@ class ScoreWarper {
         }
     } // translate()
 
-    /**
-     * Add a translation to an element node
-     * @param {Element} element
-     * @param {number} delta
-     * @param {Boolean} clearTransforms
-     */
-    #addTranslation(element, delta, clearTransforms = false) {
-        if (clearTransforms) element.transform.baseVal.clear();
-        let newTranslate = this._svgObj.createSVGTransform();
-        newTranslate.setTranslate(delta, 0);
-        element.transform.baseVal.insertItemBefore(newTranslate, 0);
-    } // addTranslation()
-
-    /**
-     * Shifts element across the x-axis by adding a translation and a scale transformation to it.
-     * @param {Element} element
-     * @param {number} x1 first x coordinate
-     * @param {number} x2 last x coordinate
-     * @param {number} xShift1 x shift for x1
-     * @param {number} xShift2 x shift for x2
-     */
-    #shiftElement(element, x1, x2, xShift1, xShift2, verbose = false) {
-        let xScale = (x2 + xShift2 - (x1 + xShift1)) / (x2 - x1);
-        if (verbose) {
-            console.log(
-                '#shiftElement x1/x2: ' +
-                x1 +
-                '/' +
-                x2 +
-                ', xShift1/xShift2: ' +
-                xShift1 +
-                '/' +
-                xShift2 +
-                ', xScale: ' +
-                xScale
-            );
-        }
-
-        // add a transformation, if none exists
-        let transformList = element.transform.baseVal; // SVGTransformList
-        if (transformList.length === 0) {
-            if (xShift1 && xShift1 < Infinity) {
-                const translate = this._svgObj.createSVGTransform();
-                translate.setTranslate(xShift1, 0);
-                transformList.appendItem(translate);
-            }
-            element.setAttribute('transform-origin', x1);
-            if (xScale && xScale < Infinity && xScale > 0) {
-                const scale = this._svgObj.createSVGTransform();
-                scale.setScale(xScale, 1);
-                transformList.appendItem(scale);
-            }
-        }
-    } // shiftElement()
-
-    // #indexOfMin(a, notThis = -1) {
-    //     let lowest = 0;
-    //     a.forEach((item, i) => {
-    //         if (item < a[lowest] && i != notThis) lowest = i;
-    //     });
-    //     return lowest;
-    // }
 } // ScoreWarper class
