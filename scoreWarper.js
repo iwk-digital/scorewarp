@@ -49,7 +49,8 @@ class ScoreWarper {
     } // init()
 
     /**
-     * Shift the page-margin group by half a notehead width to the left
+     * Shift the page-margin group by half a notehead width to the left 
+     * (quick hack to center the lines on noteheads)
      */
     shiftPageMargin() {
         let pageMarginElement = this._svgObj.querySelector('.page-margin');
@@ -113,7 +114,7 @@ class ScoreWarper {
             }
         });
 
-        // calculate noteSVGs with mean onset times per event (as in maps object)
+        // calculate onsetSVGs with mean onset times per event (as in maps object)
         this._onsetSVGXs = []; // SVG x values of onset times
         maps.forEach((item, i) => {
             if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
@@ -161,6 +162,7 @@ class ScoreWarper {
      * Adjusts individual notes in a chord. To be run after calling warp().
      */
     warpIndividualNotes() {
+        // iterate over all notes in the maps file
         this._maps.forEach((item, i) => {
             if (i >= this.firstOnsetIdx(this._maps) && i <= this.lastOnsetIdx(this._maps)) {
                 let onsetSVGx = this.time2svg(item.obs_mean_onset);
@@ -172,12 +174,14 @@ class ScoreWarper {
                         if (xTranslate.length > 0) {
                             xShift = xTranslate.getItem(0).matrix.e;
                         } else {
-                            xShift = note.closest('.chord').transform.baseVal.getItem(0).matrix.e;
+                            xShift = note.closest('.chord')?.transform.baseVal.getItem(0).matrix.e;
                         }
                         let notehead = note.querySelector('g.notehead');
                         let noteheadBB = notehead?.getBBox();
                         let noteX = noteheadBB.x + xShift; // + noteHeadBB.width / 2;
-                        this.#translate(note, onsetSVGx - noteX, false);
+                        this.#translate(note, onsetSVGx - noteX, true);
+                    } else {
+                        console.debug('No note element found: ', id);
                     }
                 });
             }
@@ -353,8 +357,8 @@ class ScoreWarper {
         // return (t - this._tmn) / (this._tmx - this._tmn) *
         //     (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]) + this._noteSVGXs[0];
         let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
-        let svgRatio = this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0];
-        return timeRatio * svgRatio + this._noteSVGXs[0];
+        let svgWidth = this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0];
+        return timeRatio * svgWidth + this._noteSVGXs[0];
     } // time2svg()
 
     /**
