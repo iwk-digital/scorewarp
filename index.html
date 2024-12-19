@@ -10,10 +10,11 @@
   <script src="https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js" defer></script>
 
   <!-- Load the script files -->
-  <script src="./gui.js" type="module"></script>
+  <script src="./gui.js"></script>
   <script src="./demo.js"></script>
   <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
+  
 </head>
 
 <body style="font-family:Arial, Helvetica, sans-serif">
@@ -31,7 +32,7 @@
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpIndividualNotes()">2) Warp notes inside chords [A]</button>
   <button onclick="loadMEI(false)">3) Reload data [C]</button>
-  <button onclick="createSVGDownloadLink()">4) Create SVG Download [D]</button>
+  <button onclick="downloadSVG()">4) Download SVG [D]</button>
   <a href id="downloadLink"></a>
   </p>
   <div id="notation" class="presentationPanel">

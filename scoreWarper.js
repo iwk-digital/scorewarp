@@ -14,7 +14,9 @@ class ScoreWarper {
         if (maps !== undefined) {
             this.loadMaps(maps);
         }
-        this.init();
+        if (this._svgObj !== undefined) {
+            this.init();
+        }
     } // constructor()
 
     //#region Control Methods
@@ -34,21 +36,22 @@ class ScoreWarper {
         this._tmn = 0; // global min onset time
         this._tmx = 0; // global max onset time
 
-        // SVG object properties
-        this._svgWidth = parseFloat(this._svgObj.getAttribute('width'));
-        this._svgHeight = parseFloat(this._svgObj.getAttribute('height'));
-        this._svgViewBox = this._svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
-        this._svgViewBox = this._svgViewBox.split(' ').map(Number);
-        let pageMarginElement = this._svgObj.querySelector('.page-margin');
-        let transformations = pageMarginElement.transform.baseVal;
-        this._pageMarginX = transformations.getItem(0).matrix.e;
+        if (this._svgObj) {
+            // SVG object properties
+            this._svgWidth = parseFloat(this._svgObj.getAttribute('width'));
+            this._svgHeight = parseFloat(this._svgObj.getAttribute('height'));
+            this._svgViewBox = this._svgObj.querySelector('svg[viewBox]').getAttribute('viewBox');
+            this._svgViewBox = this._svgViewBox.split(' ').map(Number);
+            let pageMarginElement = this._svgObj.querySelector('.page-margin');
+            let transformations = pageMarginElement.transform.baseVal;
+            this._pageMarginX = transformations.getItem(0).matrix.e;
 
-        // console output
-        console.debug('svgObj: ', this._svgObj);
-        console.debug('svgObj width: ', this._svgWidth);
-        console.debug('svgObj viewBox: ', this._svgViewBox);
-        console.debug('svgObj transform: ', pageMarginElement.transform);
-        console.debug('svgObj transform bsVl: ', transformations.getItem(0));
+            console.debug('svgObj: ', this._svgObj);
+            console.debug('svgObj width: ', this._svgWidth);
+            console.debug('svgObj viewBox: ', this._svgViewBox);
+            console.debug('svgObj transform: ', pageMarginElement.transform);
+            console.debug('svgObj transform bsVl: ', transformations.getItem(0));
+        }
     } // init()
 
     /**
@@ -190,10 +193,10 @@ class ScoreWarper {
             }
         });
     } // adjustIndividualNotes()
- 
+
     //#endregion Control Methods
 
-    
+
 
     //#region Getters
 

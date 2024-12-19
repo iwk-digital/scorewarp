@@ -34,7 +34,7 @@ let perfSel; // selection element for performances
  * @returns {void}
  * @description
  */
-document.addEventListener("DOMContentLoaded", ( ) => {
+document.addEventListener("DOMContentLoaded", () => {
     // read default files from demo.js
     if (defaultMeiFileName) {
         meiFileName = defaultMeiFileName;
@@ -49,11 +49,11 @@ document.addEventListener("DOMContentLoaded", ( ) => {
     if (defaultPiece) {
         document.getElementById('piece').value = defaultPiece;
         console.log('defaultPiece: ', defaultPiece);
-    }
-    let perfSel = document.getElementById("performance");
-    perfSel.length = 1;
-    for (var y in demoFiles[defaultPiece].performances) {
-        perfSel.options[perfSel.options.length] = new Option(y, y);
+        let perfSel = document.getElementById("performance");
+        perfSel.length = 1;
+        for (let y in demoFiles[defaultPiece].performances) {
+            perfSel.options[perfSel.options.length] = new Option(y, y);
+        }
     }
 
     // add keyboardListeners and update notation panel
@@ -80,9 +80,11 @@ document.addEventListener("DOMContentLoaded", ( ) => {
 * Parse the SVG text to an SVG object and call loadMEIfinalizing().
 */
 function loadMEI(reload = true) {
+    if (!meiFileName) {
+        return;
+    }
     warped = false;
     clearAllLines();
-    document.getElementById("downloadLink").innerHTML = "";
     document.getElementById("performanceTime").innerHTML = "";
     document.getElementById("notation").innerHTML = '<b>Loading ' + meiFileName + '...</b>';
     console.log('Loading ' + meiFileName + '...');
@@ -116,7 +118,9 @@ function loadMEI(reload = true) {
  * List all warpable elements of the score.
  */
 function updateGUI() {
-    // console.log("loadMEIfinalizing()");
+    if (!svgString) {
+        return;
+    }
 
     // parse SVG text to SVG object
     let svgDocument = new DOMParser().parseFromString(svgString, "image/svg+xml");
@@ -137,7 +141,6 @@ function updateGUI() {
         demoFiles[pieceSel.value].performances[perfSel.value]) {
         updateMapsFile(demoFiles[pieceSel.value].performances[perfSel.value]);
     }
-    // createSVGDownloadLink(svgText);
 } // updateGUI()
 
 /**
@@ -152,7 +155,7 @@ function keyboardListener(e) {
     if (e.code == 'KeyA') warpIndividualNotes(); // warp score to match performed notes
     if (e.code == "KeyC") loadMEI(false); // reload MEI file
     if (e.code == "KeyD" && scoreWarper.svgObj) { // create SVG download link
-        createSVGDownloadLink();
+        downloadSVG();
     }
 } // keyboardListener()
 
@@ -172,7 +175,7 @@ function warp() {
 
         drawConnectorLines('chords');
         drawTimeAxis(scoreWarper.svgObj, true, scoreWarper.svgHeight - 20, 'cornflowerblue');
-        // createSVGDownloadLink(new XMLSerializer().serializeToString(svgObj));
+        // downloadSVG(new XMLSerializer().serializeToString(svgObj));
     }
 } // warp()
 
@@ -337,7 +340,7 @@ function loadPerformanceTiming(maps) {
         // let pageMarginElement = document.querySelector('.page-margin');
         // drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
 
-        createSVGDownloadLink(serializer.serializeToString(scoreWarper.svgObj));
+        // downloadSVG(serializer.serializeToString(scoreWarper.svgObj));
         drawLinesInScore();
     }
 } // loadPerformanceTiming()
@@ -391,7 +394,7 @@ function updateMeiFile(fileName = "") {
     console.info("updateMEIfile " + meiFileName);
     clearAllLines();
     loadMEI();
-}
+} // updateMeiFile()
 
 function updateMapsFile(fileName = "") {
     mapsFileName = fileName;
@@ -407,7 +410,7 @@ function updateMapsFile(fileName = "") {
             loadPerformanceTiming(json);
         });
     console.info('updateMapsFile maps: ', scoreWarper.maps);
-}
+} // updateMapsFile()
 
 window.onload = function () {
     pieceSel = document.getElementById("piece");
@@ -433,10 +436,10 @@ window.onload = function () {
         console.info("Performance: " + performanceName + ', mapsFile:' + mapsFile);
         updateMapsFile(mapsFile);
     }
-}
+} // window.onload()
 
-// creates a downloadable file with svg as text, and a download link
-function createSVGDownloadLink() {
+// creates SVG blob and downloads it
+function downloadSVG() {
     if (scoreWarper.svgObj) {
         let svg = new XMLSerializer().serializeToString(scoreWarper.svgObj);
         let type = "image/svg+xml";
@@ -448,15 +451,16 @@ function createSVGDownloadLink() {
         let svgName = "";
         if (!warped && pieceSel && pieceSel.value) {
             svgName = pieceSel.value;
-            a.innerHTML = "Download SVG";
+            // a.innerHTML = "Download SVG";
         }
         if (warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
             svgName = pieceSel.value + '_' + perfSel.value;
-            a.innerHTML = "Download Warped SVG";
+            // a.innerHTML = "Download Warped SVG";
         }
         a.download = svgName;
+        a.click();
     }
-} // createSVGDownloadLink()
+} // downloadSVG()
 
 function addLine(node, x1, x2, y1, y2, color = "black", strokeWidth = 1) {
     const line = document.createElementNS(svgNS, 'line');

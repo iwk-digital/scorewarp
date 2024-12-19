@@ -94,7 +94,10 @@ const demoFiles = {
   }
 };
 
-const defaultPiece = 'Beethoven Op119_No1_1';
-const defaultMapsFileName = './eval/Beethoven_Op119_1_maps.json';
-const defaultMeiFileName =
-  "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
+const defaultPiece = '';
+const defaultMapsFileName = '';
+const defaultMeiFileName = '';
+// const defaultPiece = 'Beethoven Op119_No1_1';
+// const defaultMapsFileName = './eval/Beethoven_Op119_1_maps.json';
+// const defaultMeiFileName =
+//   "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
