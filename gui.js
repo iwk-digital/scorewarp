@@ -154,8 +154,13 @@ function keyboardListener(e) {
     if (e.code == 'KeyW') warp(); // warp score to match performed events
     if (e.code == 'KeyA') warpIndividualNotes(); // warp score to match performed notes
     if (e.code == "KeyC") loadMEI(false); // reload MEI file
-    if (e.code == "KeyD" && scoreWarper.svgObj) { // create SVG download link
+    // download score SVG file
+    if (e.code == "KeyD" && scoreWarper.svgObj) {
         downloadSVG();
+    }
+    // download score and performance SVG files
+    if (e.code == "KeyF" && scoreWarper.svgObj) {
+        downloadSVG(true);
     }
 } // keyboardListener()
 
@@ -184,11 +189,7 @@ function warp() {
  */
 function warpIndividualNotes() {
     if (warped) {
-        // clear download link element
-        document.getElementById('downloadLink').innerHTML = '';
-
         scoreWarper.warpIndividualNotes();
-
         drawConnectorLines('notes');
     } else {
         console.info('Please warp the score first.');
@@ -438,7 +439,8 @@ window.onload = function () {
 } // window.onload()
 
 // creates SVG blob and downloads it
-function downloadSVG() {
+function downloadSVG(savePerformance = false) {
+    let svgName = '';
     if (scoreWarper.svgObj) {
         let svg = new XMLSerializer().serializeToString(scoreWarper.svgObj);
         let type = "image/svg+xml";
@@ -447,7 +449,6 @@ function downloadSVG() {
             type: type
         });
         a.href = URL.createObjectURL(file);
-        let svgName = "";
         if (!warped && pieceSel && pieceSel.value) {
             svgName = pieceSel.value;
             // a.innerHTML = "Download SVG";
@@ -459,6 +460,19 @@ function downloadSVG() {
         a.download = svgName;
         a.click();
     }
+    let performanceSVG = document.getElementById('performanceTime').querySelector('svg');
+    if (savePerformance && performanceSVG) {
+        let svg = new XMLSerializer().serializeToString(performanceSVG)
+        let type = "image/svg+xml";
+        let a = document.getElementById("downloadLink");
+        var file = new Blob([svg], {
+            type: type
+        });
+        a.href = URL.createObjectURL(file);
+        a.download = svgName + '_performance';
+        a.click();
+    }
+
 } // downloadSVG()
 
 function addLine(node, x1, x2, y1, y2, color = "black", strokeWidth = 1) {
