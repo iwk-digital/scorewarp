@@ -152,7 +152,7 @@ class ScoreWarper {
             'path', // for slur, barline, (stem handled by note, staff lines ignored)
             'use[x]', // for many elements
             'text[x]',
-            // 'rect[x]',
+            'rect[x]',
             // 'ellipse', // not for dots, for what?
             // 'circle', // for what?
         ];
@@ -185,7 +185,7 @@ class ScoreWarper {
                         let notehead = note.querySelector('g.notehead');
                         let noteheadBB = notehead?.getBBox();
                         let noteX = noteheadBB.x + xShift; // + noteHeadBB.width / 2;
-                        this.#translate(note, onsetSVGx - noteX, true);
+                        this.#translate(note, onsetSVGx - noteX);
                     } else {
                         console.debug('No note element found: ', id);
                     }
@@ -713,7 +713,7 @@ class ScoreWarper {
 
                 // rect, use, text, ellipse, circle
                 else {
-                    // console.debug('Potentiall shift ', item);
+                    // if not within these elements, shift element
                     if (
                         !item.closest('.chord') &&
                         !item.closest('.note') &&
@@ -721,7 +721,6 @@ class ScoreWarper {
                         !item.closest('.rest') &&
                         !item.closest('.hairpin')
                     ) {
-                        // not within
                         console.debug('Shift ', item, 'inside ', item.parentElement);
                         let attribute = 'x';
                         if (item.nodeName == 'ellipse' || item.nodeName == 'circle') {
@@ -729,7 +728,7 @@ class ScoreWarper {
                         }
                         let x = parseFloat(item.getAttribute(attribute));
                         let xShift = warpingFunction[Math.round(x)];
-                        item.setAttribute(attribute, x + xShift);
+                        this.#translate(item, xShift);
                     }
                 }
             });
@@ -742,7 +741,7 @@ class ScoreWarper {
      * @param {number} delta
      * @param {Boolean} useExisting
      */
-    #translate(item, delta, useExisting = true) {
+    #translate(item, delta) {
         let existingX = 0;
         let transformList = item.transform.baseVal; // SVGTransformList
 
@@ -755,7 +754,7 @@ class ScoreWarper {
                 // trList.forEach((currTrans, i) => {
                 if (currTrans.type === SVGTransform.SVG_TRANSFORM_TRANSLATE) {
                     // console.debug('TRANSLATION FOUND: ', item);
-                    if (useExisting) existingX = currTrans.matrix.e;
+                    existingX = currTrans.matrix.e;
                     break;
                 }
             }
