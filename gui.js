@@ -131,7 +131,7 @@ function updateGUI() {
 
     // update notation panel
     let notationDiv = document.getElementById("notation");
-    notationDiv.innerHTML = "<p><b>" + pieceSel.value + "</b></p>";
+    notationDiv.innerHTML = "<p><b>Score:</b> " + pieceSel.value + "</p>";
     notationDiv.appendChild(scoreWarper.svgObj);
     // console.log('NotationDiv: ', notationDiv);
 
@@ -196,10 +196,10 @@ function warpIndividualNotes() {
 } // warpIndividualNotes()
 
 // basic drawing coordinates
-let y0basis = 120; // y of time axis
-let y1 = 80; // y of straigth lines
+let y0basis = 110; // y of time axis
+let y1 = 70; // y of straigth lines
 let y2 = 0; // y of orange connector lines
-let yMx = 130; // mx y of performance panel
+let yMx = 140; // mx y of performance panel
 
 /**
  * Draw orange lines, to connect to 'score' or to performed 'notes'
@@ -306,19 +306,18 @@ function loadPerformanceTiming(maps) {
     scoreWarper.maps = maps;
 
     // performanceTime Panel to demonstrate
-    document.getElementById("downloadLink").innerHTML = "";
     let ptObj = createScoreTimeSVG(scoreWarper.svgWidth, yMx);
     ptObj.setAttribute('class', 'performanceTime');
 
-    addLine(ptObj, scoreWarper.fstX, scoreWarper.fstX, y0basis, yMx, 'blue'); // first line
-    addLine(ptObj, scoreWarper.lstX, scoreWarper.lstX, y0basis, yMx, 'blue'); // last line
+    // addLine(ptObj, scoreWarper.fstX, scoreWarper.fstX, y0basis, yMx, 'blue'); // first line
+    // addLine(ptObj, scoreWarper.lstX, scoreWarper.lstX, y0basis, yMx, 'blue'); // last line
 
     // plot onset info to ptObj
     scoreWarper.maps.forEach((item, i) => {
         if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) &&
             i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
             let screenX = scoreWarper.time2screen(item.obs_mean_onset);
-            addLine(ptObj, screenX, screenX, 80, 180, 'purple');
+            addLine(ptObj, screenX, screenX, y0basis, y1, 'purple');
             // save onset time data in SVG coordinates
         }
     });
@@ -329,7 +328,7 @@ function loadPerformanceTiming(maps) {
     let scoreTimeDiv = document.getElementById("performanceTime");
     scoreTimeDiv.innerHTML = serializer.serializeToString(ptObj);
     if (pieceSel && pieceSel.value && perfSel && perfSel.value) {
-        scoreTimeDiv.innerHTML += "<p><b>" + perfSel.value + "</b></p>";
+        scoreTimeDiv.innerHTML += "<p><b>Performance: </b>" + perfSel.value + "</p>";
     }
 
     drawConnectorLines('score');
