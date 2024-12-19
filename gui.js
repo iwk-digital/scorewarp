@@ -148,7 +148,8 @@ function updateGUI() {
  * - 'W' warps the score to match the performed events
  * - 'A' warps the score to match the performed notes
  * - 'C' reloads the MEI file
- * - 'D' creates a downloadable SVG file
+ * - 'D' downloads score SVG file
+ * - 'F' downloads score and performance SVG file (only keyboard shortcut, no button)
  */
 function keyboardListener(e) {
     if (e.code == 'KeyW') warp(); // warp score to match performed events
