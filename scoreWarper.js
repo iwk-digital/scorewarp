@@ -9,9 +9,11 @@
  */
 class ScoreWarper {
   constructor(svgObject = undefined, maps = undefined) {
-    this._svgObj = svgObject; // the SVG element
-    this._maps = maps; // store the maps file content
+    if (this._svgObj !== undefined) {
+      this._svgObj = svgObject; // the SVG element
+    }
     if (maps !== undefined) {
+      this._maps = maps; // store the maps file content
       this.loadMaps(maps);
     }
     if (this._svgObj !== undefined) {
@@ -314,6 +316,16 @@ class ScoreWarper {
   } // set maps()
 
   /**
+   * Set the SVG string to be parsed
+   * @param {string} svgString
+   */
+  set svgString(svgString) {
+    const parser = new DOMParser();
+    this._svgObj = parser.parseFromString(svgString, 'image/svg+xml').documentElement;
+    this.init();
+  } // set svgString()
+
+  /**
    * Set svgObj (the SVG element)
    */
   set svgObj(svgObj) {
@@ -408,7 +420,7 @@ class ScoreWarper {
    */
   lastOnsetIdx(maps) {
     let i = maps.length - 1;
-    while (maps[i].xml_id[0].includes('trompa')) i--;
+    while (maps[i].hasOwnProperty('xml_id') && maps[i].xml_id[0].includes('trompa')) i--;
     // console.debug('getLastOnsetIdx i: ' + i);
     return i;
   } // lastOnsetIdx()
@@ -758,3 +770,4 @@ class ScoreWarper {
     }
   } // translate()
 } // ScoreWarper class
+module.exports = ScoreWarper;

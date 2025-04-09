@@ -1,2 +1,4 @@
 verovio-toolkit-wasm.js
 .DS_Store
+
+node_modules/

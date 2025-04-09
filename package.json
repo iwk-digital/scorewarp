@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "https": "^1.0.0",
+    "svg-parser": "^2.0.4",
+    "verovio": "^5.1.0",
+    "xmldom": "^0.6.0"
+  }
+}

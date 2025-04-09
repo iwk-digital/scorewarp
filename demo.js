@@ -125,3 +125,4 @@ const defaultMeiFileName = '';
 // const defaultMapsFileName = './eval/Beethoven_Op119_1_maps.json';
 // const defaultMeiFileName =
 //   "https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op119_BreitkopfHaertel/master/Beethoven_Op119_Nr01-Breitkopf.mei";
+module.exports.demoFiles = demoFiles;
