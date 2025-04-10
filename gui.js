@@ -17,6 +17,10 @@ let tk; // toolkit instance
 let tkVersion = ''; // toolkit version string
 let tkOptions = {
   svgHtml5: true,
+  scale: 30,
+  breaks: 'none',
+  header: 'none',
+  footer: 'none',
 };
 
 let svgString; // raw SVG text string of engraved MEI file
@@ -36,6 +40,29 @@ let showRedLines = true; // whether or not to show red lines in the score
  * @description
  */
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fileInput').addEventListener('change', handleFiles, false);
+  // drag and drop
+  const dropArea = document.getElementById('dropArea');
+  dropArea.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dropArea.classList.add('dragover');
+  });
+  dropArea.addEventListener('dragleave', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dropArea.classList.remove('dragover');
+  });
+  dropArea.addEventListener('drop', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dropArea.classList.remove('dragover');
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      handleFiles({ target: { files } });
+    }
+  });
+
   // read default files from demo.js
   if (defaultMeiFileName) {
     meiFileName = defaultMeiFileName;
@@ -76,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }); // DOMCOntentLoaded() listener
 
 /**
- * Load MEI string from meiFileName and render it to SVG using Verovio.
+ * Load MEI string from global variable meiFileName and render it to SVG using Verovio.
  * Parse the SVG text to an SVG object and call loadMEIfinalizing().
  */
 function loadMEI(reload = true) {
@@ -93,12 +120,8 @@ function loadMEI(reload = true) {
       .then((response) => response.text())
       .then((meiText) => {
         console.log('MEI loaded.'); // , meiText);
-        tk.setOptions({
-          scale: 30,
-          breaks: 'none',
-          header: 'none',
-          footer: 'none',
-        });
+        tk.setOptions(tkOptions);
+        // save to global variable svgString
         svgString = tk.renderData(meiText, {});
         console.log('SVG rendered.');
 
@@ -109,6 +132,65 @@ function loadMEI(reload = true) {
     updateGUI();
   }
 } // loadMEI()
+
+/**
+ * Load MEI from local file and render it to SVG using Verovio.
+ */
+async function loadMEIfromLocalFile(file) {
+  if (!file) {
+    return;
+  }
+  warped = false;
+  clearAllLines();
+  document.getElementById('performanceTime').innerHTML = '';
+  document.getElementById('notation').innerHTML = '<b>Loading ' + file.name + '...</b>';
+  console.log('Loading ' + file.name + '...');
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const meiText = event.target.result;
+      console.log('MEI loaded.'); // , meiText);
+      tk.setOptions(tkOptions);
+      // save to global variable svgString
+      svgString = tk.renderData(meiText, {});
+      console.log('SVG rendered.');
+
+      // when SVG is loaded, finalize loading
+      updateGUI();
+      resolve();
+    };
+    reader.onerror = function (event) {
+      console.error('Error reading file: ', event);
+      reject(event);
+    };
+    reader.readAsText(file);
+  });
+} // loadMEIfromLocalFile()
+
+/**
+ * Load maps file locally
+ */
+function loadLocalMapsFile(mapsFile) {
+  return new Promise((resolve, reject) => {
+    if (mapsFile) {
+      mapsFileName = mapsFile.name;
+      console.info('loadLocalMapsFile() ' + mapsFileName);
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const jsonText = event.target.result;
+        console.log('Maps loaded.'); // , meiText);
+        scoreWarper.maps = JSON.parse(jsonText);
+        loadPerformanceTiming(scoreWarper.maps);
+        resolve();
+      };
+      reader.onerror = function (event) {
+        console.error('Error reading file: ', event);
+        reject(event);
+      };
+      reader.readAsText(mapsFile);
+    }
+  });
+} // loadLocalMapsFile()
 
 /**
  * Finalize loading of MEI file.
@@ -158,10 +240,10 @@ function keyboardListener(e) {
   if (e.code == 'KeyD' && scoreWarper.svgObj) {
     downloadSVG();
   }
-  // download score and performance SVG files
-  if (e.code == 'KeyF' && scoreWarper.svgObj) {
-    downloadSVG(true);
-  }
+  // // download score and performance SVG files
+  // if (e.code == 'KeyF' && scoreWarper.svgObj) {
+  //   downloadSVG(true);
+  // }
 } // keyboardListener()
 
 /**
@@ -298,7 +380,18 @@ function clearAllLines() {
   if (pm) {
     pm.querySelectorAll('line').forEach((item) => item.remove());
   }
+  clearLinesInScore();
 } // clearAllLines()
+
+/**
+ * Clears all lines from the score
+ */
+function clearLinesInScore() {
+  let lineContainer = document.querySelector('.lineContainer');
+  if (lineContainer) {
+    lineContainer.querySelectorAll('line').forEach((item) => item.remove());
+  }
+} // clearLinesInScore()
 
 /**
  *
@@ -440,39 +533,40 @@ window.onload = function () {
 }; // window.onload()
 
 // creates SVG blob and downloads it
-function downloadSVG(savePerformance = false) {
-  let svgName = '';
-  if (scoreWarper.svgObj) {
-    let svg = new XMLSerializer().serializeToString(scoreWarper.svgObj);
-    let type = 'image/svg+xml';
-    let a = document.getElementById('downloadLink');
-    var file = new Blob([svg], {
-      type: type,
-    });
-    a.href = URL.createObjectURL(file);
-    if (!warped && pieceSel && pieceSel.value) {
-      svgName = pieceSel.value;
-      // a.innerHTML = "Download SVG";
+async function downloadSVG(svgName = '') {
+  return new Promise((resolve) => {
+    if (scoreWarper.svgObj) {
+      let svg = new XMLSerializer().serializeToString(scoreWarper.svgObj);
+      let type = 'image/svg+xml';
+      let a = document.getElementById('downloadLink');
+      var file = new Blob([svg], {
+        type: type,
+      });
+      a.href = URL.createObjectURL(file);
+      if (!svgName && !warped && pieceSel && pieceSel.value) {
+        svgName = pieceSel.value;
+        // a.innerHTML = "Download SVG";
+      }
+      if (!svgName && warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
+        svgName = pieceSel.value + '_' + perfSel.value;
+        // a.innerHTML = "Download Warped SVG";
+      }
+      a.download = svgName;
+      a.click();
     }
-    if (warped && pieceSel && pieceSel.value && perfSel && perfSel.value) {
-      svgName = pieceSel.value + '_' + perfSel.value;
-      // a.innerHTML = "Download Warped SVG";
-    }
-    a.download = svgName;
-    a.click();
-  }
-  let performanceSVG = document.getElementById('performanceTime').querySelector('svg');
-  if (savePerformance && performanceSVG) {
-    let svg = new XMLSerializer().serializeToString(performanceSVG);
-    let type = 'image/svg+xml';
-    let a = document.getElementById('downloadLink');
-    var file = new Blob([svg], {
-      type: type,
-    });
-    a.href = URL.createObjectURL(file);
-    a.download = svgName + '_performance';
-    a.click();
-  }
+  });
+  // let performanceSVG = document.getElementById('performanceTime').querySelector('svg');
+  // if (savePerformance && performanceSVG) {
+  //   let svg = new XMLSerializer().serializeToString(performanceSVG);
+  //   let type = 'image/svg+xml';
+  //   let a = document.getElementById('downloadLink');
+  //   var file = new Blob([svg], {
+  //     type: type,
+  //   });
+  //   a.href = URL.createObjectURL(file);
+  //   a.download = svgName + '_performance';
+  //   a.click();
+  // }
 } // downloadSVG()
 
 /**
@@ -482,12 +576,64 @@ function toggleRedLines() {
   showRedLines = !showRedLines;
   if (showRedLines) {
     drawLinesInScore();
-  }
-  let lineContainer = document.querySelector('.lineContainer');
-  if (lineContainer) {
-    lineContainer.style.display = showRedLines ? 'block' : 'none';
+  } else {
+    clearLinesInScore();
   }
 } // toggleRedLines()
+
+/**
+ * Handle the files of the input #fileInput, check whether there is
+ * one MEI file and at least one maps file, load them, warp them,
+ * and download the warped SVG.
+ * @param {Event} event - the event triggered by the file input
+ * @returns {void}
+ * @description
+ * This function is called when the user selects files from the file input,
+ * or drags and drops files into the input area.
+ * It checks if there is one MEI file and at least one maps file,
+ * and loads them into the score warper.
+ * It also updates the maps file and downloads the warped SVG.
+ * If there are no MEI files or no maps files, it shows an alert.
+ */
+async function handleFiles(event) {
+  const files = event.target.files;
+  let meiFile = null;
+  let mapsFiles = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    console.log('Loading file: ', file);
+    if (file.type === 'text/xml' || file.type === 'application/xml' || file.name.endsWith('.mei')) {
+      meiFile = file;
+    } else if (file.type === 'application/json' || file.name.endsWith('.json') || file.name.endsWith('.maps')) {
+      mapsFiles.push(file);
+    }
+  }
+  if (!meiFile) {
+    alert('Please select a MEI file.');
+    return;
+  }
+  if (mapsFiles.length === 0) {
+    alert('Please select at least one maps file.');
+    return;
+  }
+
+  // read MEI file
+  meiFileName = meiFile.name;
+  await loadMEIfromLocalFile(meiFile);
+
+  mapsFiles.forEach(async (mapsFile) => {
+    clearAllLines();
+    await loadLocalMapsFile(mapsFile);
+    setTimeout(() => warp(), 10);
+    let svgName = meiFile.name + '-' + mapsFile.name + '.svg';
+    setTimeout(() => downloadSVG(svgName), 100);
+
+    // TODO: instead of trying to download the SVG, we should
+    // creat a ZIP file with all the warped SVGs
+    // let zip = new JSZip();
+    // zip.file(svgName, svgString);
+  });
+} // handleFiles()
 
 function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
   const line = document.createElementNS(svgNS, 'line');

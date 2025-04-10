@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <link rel="icon" href="https://www.mdw.ac.at/favicon.ico">
- 
+
   <!-- Load Verovio toolkit -->
   <!-- <script src="http://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js" defer></script> -->
   <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js" defer></script>
@@ -14,14 +14,14 @@
   <script src="./demo.js"></script>
   <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
-  
+
 </head>
 
 <body style="font-family:Arial, Helvetica, sans-serif">
   <h1>Let&rsquo;s do the Score Warp again!</h1>
   <p>
   <form name="form1" id="form1" action="#">
-    Demo pieces/performances <select name="piece" id="piece">
+    Demo pieces with performances <select name="piece" id="piece">
       <option value="" selected="selected">Select a piece</option>
     </select>
     <select name="performance" id="performance">
@@ -29,6 +29,11 @@
     </select>
     <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
   </form>
+  <div id="dropArea" title="Please provide exactly one MEI file and one or more MAPS files that reference the ids of the MEI file.">
+    <img src="./upload-16.svg" alt="MDW Logo" width="50" height="50">
+    <p>...or warp your own files.</p>
+    <input type="file" id="fileInput" accept=".mei,.maps,.json" /> 
+  </div>
   <button onclick="warp()">1) Warp [W]</button>
   <button onclick="warpIndividualNotes()">2) Warp notes inside chords [A]</button>
   <button onclick="loadMEI(false)">3) Reload data [C]</button>
