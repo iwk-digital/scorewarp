@@ -106,6 +106,10 @@ const demoFiles = {
       'Duo 1 Round 1': './eval/duo1-PostR-1Schumann.maps.json',
       'Duo 1 Round 2': './eval/duo1-PostR-2Schumann.maps.json',
       'Duo 1 Round 3': './eval/duo1-PostR-3Schumann.maps.json',
+      'Duo 2 Pre Rnd': './eval/duo2-PreR-Schumann.maps.json',
+      'Duo 2 Round 1': './eval/duo2-PostR-1Schumann.maps.json',
+      'Duo 2 Round 2': './eval/duo2-PostR-2Schumann.maps.json',
+      'Duo 2 Round 3': './eval/duo2-PostR-3Schumann.maps.json',
     },
   },
   'Fauré: Automne': {
@@ -114,6 +118,10 @@ const demoFiles = {
     performances: {
       'Duo 1 Round 2': './eval/duo1-PostR-2Faure.maps.json',
       'Duo 1 Round 3': './eval/duo1-PostR-3Faure.maps.json',
+      'Duo 2 Pre Rnd': './eval/duo2-PreR-Faure.maps.json',
+      'Duo 2 Round 1': './eval/duo2-PostR-1Faure.maps.json',
+      'Duo 2 Round 2': './eval/duo2-PostR-2Faure.maps.json',
+      'Duo 2 Round 3': './eval/duo2-PostR-3Faure.maps.json',
     },
   },
 };
