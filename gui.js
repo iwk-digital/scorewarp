@@ -40,7 +40,7 @@ let showRedLines = true; // whether or not to show red lines in the score
  * @description
  */
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fileInput').addEventListener('change', handleFiles, false);
+  document.getElementById('fileInput').addEventListener('change', handleLocalFiles, false);
   // drag and drop
   const dropArea = document.getElementById('dropArea');
   dropArea.addEventListener('dragover', (event) => {
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dropArea.classList.remove('dragover');
     const files = event.dataTransfer.files;
     if (files.length > 0) {
-      handleFiles({ target: { files } });
+      handleLocalFiles({ target: { files } });
     }
   });
 
@@ -595,7 +595,7 @@ function toggleRedLines() {
  * It also updates the maps file and downloads the warped SVG.
  * If there are no MEI files or no maps files, it shows an alert.
  */
-async function handleFiles(event) {
+async function handleLocalFiles(event) {
   const files = event.target.files;
   let meiFile = null;
   let mapsFiles = [];
@@ -632,8 +632,9 @@ async function handleFiles(event) {
     // creat a ZIP file with all the warped SVGs
     // let zip = new JSZip();
     // zip.file(svgName, svgString);
+    // https://stuk.github.io/jszip/
   });
-} // handleFiles()
+} // handleLocalFiles()
 
 function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
   const line = document.createElementNS(svgNS, 'line');
