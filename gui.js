@@ -6,7 +6,7 @@
  */
 
 // Default variables
-const dateString = 'Demo version, 19 December 2024';
+const dateString = 'Demo version, 10 April 2025';
 const svgNS = 'http://www.w3.org/2000/svg';
 
 let meiFileName = '';
@@ -24,6 +24,7 @@ let scoreWarper; // score warper object
 let warped = false; // whether or not the score has been warped
 let pieceSel; // selection element for pieces
 let perfSel; // selection element for performances
+let showRedLines = true; // whether or not to show red lines in the score
 
 /**
  * This function is called when the DOM is fully loaded.
@@ -335,7 +336,7 @@ function loadPerformanceTiming(maps) {
   drawTimeAxis(document.querySelector('.performanceTime'));
 
   // for DEBUGGING: plot warping function...
-  if (true) {
+  if (showRedLines) {
     // let pageMarginElement = document.querySelector('.page-margin');
     // drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
 
@@ -473,6 +474,20 @@ function downloadSVG(savePerformance = false) {
     a.click();
   }
 } // downloadSVG()
+
+/**
+ * Toggle red lines in the score
+ */
+function toggleRedLines() {
+  showRedLines = !showRedLines;
+  if (showRedLines) {
+    drawLinesInScore();
+  }
+  let lineContainer = document.querySelector('.lineContainer');
+  if (lineContainer) {
+    lineContainer.style.display = showRedLines ? 'block' : 'none';
+  }
+} // toggleRedLines()
 
 function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
   const line = document.createElementNS(svgNS, 'line');
