@@ -1,3 +1,22 @@
+#header {
+    background-color: lightblue;
+    padding: 5px;
+    text-align: center;
+    display: flex;
+    justify-content: flex-start;
+    align-items: start;
+    flex-direction: row;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    border: 1px solid darkgray;
+}
+
+.headerItem {
+    font-weight: bold;
+    padding: 15px;
+    margin: 10px;
+}
+
 .presentationPanel {
   border-width: 1px;
   border-style: solid;
@@ -17,8 +36,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 20px;
-  margin: 10px;}
+ }
 
 #dragNdrop:hover {
   background-color: lightblue;
