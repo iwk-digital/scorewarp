@@ -1,6 +1,8 @@
 <html>
 
 <head>
+  <!-- to start at terminal:  "python3 -m http.server" -->
+  <title>ScoreWarp</title>
   <meta charset="utf-8">
   <link rel="icon" href="https://www.mdw.ac.at/favicon.ico">
 
@@ -11,6 +13,8 @@
 
   <!-- Load the script files -->
   <script src="./gui.js"></script>
+  <script src="./deps/jszip.min.js"></script>
+  <script src="./deps/FileSaver.min.js"></script>
   <script src="./demo.js"></script>
   <script src="./scoreWarper.js"></script>
   <link rel="stylesheet" href="./styles.css">
@@ -30,7 +34,7 @@
       <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
     </form>
     <div id="dropArea" class="headerItem" title="Please provide exactly one MEI file and one or more MAPS files that reference the ids of the MEI file.">
-      <img src="./upload-16.svg" alt="MDW Logo" width="50" height="50">
+      <img src="./upload-16.svg" alt="MDW Logo" width="32" height="32">
       <p>...or warp your own files.</p>
       <input type="file" id="fileInput" accept=".mei,.maps,.json" /> 
     </div>

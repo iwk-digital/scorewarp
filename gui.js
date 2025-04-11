@@ -6,7 +6,7 @@
  */
 
 // Default variables
-const dateString = 'Demo version, 10 April 2025';
+const dateString = 'Demo version, 11 April 2025';
 const svgNS = 'http://www.w3.org/2000/svg';
 
 let meiFileName = '';
@@ -621,18 +621,26 @@ async function handleLocalFiles(event) {
   meiFileName = meiFile.name;
   await loadMEIfromLocalFile(meiFile);
 
+  let zip = new JSZip();
+  let zipFileName = meiFileName.replace('.mei', '-ScoreWarped.zip');
+  console.log('Creating ZIP file: ', zipFileName);
+
   mapsFiles.forEach(async (mapsFile) => {
     clearAllLines();
     await loadLocalMapsFile(mapsFile);
     setTimeout(() => warp(), 10);
     let svgName = meiFile.name + '-' + mapsFile.name + '.svg';
-    setTimeout(() => downloadSVG(svgName), 100);
 
-    // TODO: instead of trying to download the SVG, we should
-    // creat a ZIP file with all the warped SVGs
-    // let zip = new JSZip();
-    // zip.file(svgName, svgString);
+    zip.file(svgName, new XMLSerializer().serializeToString(scoreWarper.svgObj));
+    console.log('Added to zip: ', svgName);
+
+    // TODO: zip file still empty, check:
     // https://stuk.github.io/jszip/
+  });
+
+  zip.generateAsync({ type: 'blob' }).then(function (content) {
+    console.log('Saving ZIP file with fileSaver.js: ', zipFileName);
+    saveAs(content, zipFileName);
   });
 } // handleLocalFiles()
 

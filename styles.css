@@ -39,7 +39,7 @@
  }
 
 #dragNdrop:hover {
-  background-color: lightblue;
+  background-color: rgb(230, 173, 222);
 }
 #dragNdrop:active {
   background-color: lightgreen;
