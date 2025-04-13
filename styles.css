@@ -27,7 +27,7 @@
 
 #dropArea {
   width: 300px;
-  height: 100px;
+  /* height: 100px; */
   background-color: lightgray;
   border-radius: 5px;
   border-style: dashed;
@@ -38,15 +38,58 @@
   align-items: center;
 }
 
-#dropArea:drop {
-  background-color: rgb(211, 160, 204);
+.dragover {
+  background-color: #8ec499;
+  border-color: #478529;
 }
-#dropArea:active {
-  background-color: lightgreen;
+
+#taskList {
+  font-size: small;
+  font-weight: normal;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 2px;
 }
-#dropArea:focus {
-  outline: none;
+
+.taskItem {
+  /* background-color: rgb(181, 213, 224); */
+  width: 98%;
+  border-width: 2px;
+  border-radius: 4px;
+  border-style: solid;
+  padding: 1px;
+  background-position: 99%;
+  background-repeat: no-repeat;
+  background-size: 12px;
 }
-#dropArea:focus-visible {
-  outline: 2px solid blue;
+/* 
+#taskList :nth-child(odd) {
+  background-color: #bcc8d3;
+} */
+
+.task-planned {
+  border-color: #0857a1;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z"></path></svg>');
+}
+
+.task-in-progress {
+  border-color: #c28b14;
+  border-style: dotted;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"></path></svg>');
+}
+
+.task-completed {
+  border-color: #09662d;
+  border-style: solid;
+  /* OK */
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"></path></svg>');
+}
+
+.task-failed {
+  border-color: #980a0a;
+  border-style: solid;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM3.965 13.096a6.5 6.5 0 0 0 9.131-9.131ZM1.5 8a6.474 6.474 0 0 0 1.404 4.035l9.131-9.131A6.499 6.499 0 0 0 1.5 8Z"></path></svg>');
 }

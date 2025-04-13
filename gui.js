@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  clearInputs();
+
   // read default files from demo.js
   if (defaultMeiFileName) {
     meiFileName = defaultMeiFileName;
@@ -179,9 +181,12 @@ async function loadLocalMapsFile(mapsFile) {
       reader.onload = function (event) {
         const jsonText = event.target.result;
         console.log('Maps loaded.'); // , meiText);
-        scoreWarper.maps = JSON.parse(jsonText);
-        loadPerformanceTiming(scoreWarper.maps);
-        resolve();
+        let msg = scoreWarper.setMaps(JSON.parse(jsonText));
+        console.log('Maps set for ' + mapsFileName + ', msg:' + msg);
+        if (msg === 'ok') {
+          loadPerformanceTiming(scoreWarper.maps);
+        }
+        resolve(msg);
       };
       reader.onerror = function (event) {
         console.error('Error reading file: ', event);
@@ -522,12 +527,14 @@ window.onload = function () {
     for (var y in demoFiles[this.value].performances) {
       perfSel.options[perfSel.options.length] = new Option(y, y);
     }
+    clearInputs();
     updateMeiFile(pieceFile);
   };
   perfSel.onchange = function () {
     let performanceName = this.value;
     let mapsFile = demoFiles[pieceSel.value].performances[this.value];
     console.info('Performance: ' + performanceName + ', mapsFile:' + mapsFile);
+    clearInputs();
     updateMapsFile(mapsFile);
   };
 }; // window.onload()
@@ -610,13 +617,15 @@ async function handleLocalFiles(event) {
     }
   }
   if (!meiFile) {
-    alert('Please select a MEI file.');
+    alert('Please select an MEI file.');
     return;
   }
   if (mapsFiles.length === 0) {
     alert('Please select at least one maps file.');
     return;
   }
+
+  createTaskList(meiFile, mapsFiles);
 
   // read MEI file
   meiFileName = meiFile.name;
@@ -630,13 +639,19 @@ async function handleLocalFiles(event) {
   // Add maps files to ZIP
   for (let j = 0; j < mapsFiles.length; j++) {
     let mapsFile = mapsFiles[j];
+    setTaskStatus(j + 1, 'in-progress');
     loadMEI(false); // reload MEI file and clear lines
-    await loadLocalMapsFile(mapsFile);
-    warp();
-
-    let svgName = `${meiFile.name}-${mapsFile.name}.svg`;
-    zip.file(svgName, new XMLSerializer().serializeToString(scoreWarper.svgObj));
-    console.log('Added to zip: ', svgName);
+    let msg = await loadLocalMapsFile(mapsFile);
+    if (msg === 'ok') {
+      warp();
+      let svgName = `${meiFile.name}-${mapsFile.name}.svg`;
+      zip.file(svgName, new XMLSerializer().serializeToString(scoreWarper.svgObj));
+      console.log('Added to zip: ', svgName);
+      setTaskStatus(j + 1, 'completed');
+    } else {
+      setTaskStatus(j + 1, 'failed');
+      console.error('Error loading maps file: ', msg);
+    }
   }
 
   // Generate and save ZIP file
@@ -679,3 +694,61 @@ function addText(node, text, x, y, halign = 'middle', color = 'black') {
   txt.appendChild(document.createTextNode(text));
   return node.appendChild(txt);
 } // addText()
+
+function createTaskList(meiFile, mapsFiles) {
+  let taskList = document.getElementById('taskList');
+  taskList.innerHTML = ''; // clear task list
+  let taskItem = createTaskItem(0, '<b>' + meiFile.name + '</b>', 'none');
+  taskList.appendChild(taskItem);
+  mapsFiles.forEach((item, i) => {
+    let taskItem = createTaskItem(i + 1, item.name);
+    taskList.appendChild(taskItem);
+  });
+} // createTaskList()
+
+function createTaskItem(taskNumber, taskName, status = 'planned') {
+  let taskItem = document.createElement('span');
+  if (taskNumber > 0) taskItem.innerHTML = `${taskNumber}`;
+  taskItem.innerHTML += `${taskName}`;
+  taskItem.id = `task${taskNumber}`;
+  taskItem.value = status;
+
+  switch (status) {
+    case 'planned':
+      taskItem.classList = 'taskItem task-planned';
+      break;
+    case 'in-progress':
+      taskItem.classList = 'taskItem task-in-progress';
+      break;
+    case 'completed':
+      taskItem.classList = 'taskItem task-completed';
+      break;
+    case 'failed':
+      taskItem.classList = 'taskItem task-failed';
+      break;
+    case 'none':
+      taskItem.classList = 'taskItem task-title';
+      break;
+  }
+
+  return taskItem;
+} // createTaskItem()
+
+function setTaskStatus(taskNumber, status) {
+  let taskItem = document.getElementById(`task${taskNumber}`);
+  if (taskItem) {
+    taskItem.value = status;
+    taskItem.classList = `taskItem task-${status}`;
+  }
+} // setTaskStatus()
+
+function clearInputs() {
+  let fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.value = ''; // clear file input
+  }
+  let taskList = document.getElementById('taskList');
+  if (taskList) {
+    taskList.innerHTML = ''; // clear task list
+  }
+} // clearInputs()

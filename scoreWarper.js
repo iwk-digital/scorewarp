@@ -58,6 +58,7 @@ class ScoreWarper {
    * Scans maps file content and calculates the coordinates for
    * time, screen, and SVG. To be called, when new maps file content is loaded.
    * @param {Object} maps
+   * @returns {string} error message, if any, or 'ok' if all successful
    */
   loadMaps(maps) {
     console.debug('ScoreWarper loadMaps() maps: ', maps);
@@ -69,11 +70,23 @@ class ScoreWarper {
 
     // determine global min and max screen x values of notes
     let id1 = maps[this.firstOnsetIdx(maps)].xml_id[0];
-    let el1 = this.getElementForId(id1).querySelector('.notehead use');
+    if (!id1) {
+      return 'No id found in maps for first onset: ' + this.firstOnsetIdx(maps);
+    }
+    let el1 = this.getElementForId(id1)?.querySelector('.notehead use');
+    if (!el1) {
+      return 'No notehead found for id1: ' + id1;
+    }
     this._fstX = this.svg2screen(parseFloat(el1.getAttribute('x')));
 
     let id2 = maps[this.lastOnsetIdx(maps)].xml_id[0];
-    let el2 = this.getElementForId(id2).querySelector('.notehead use');
+    if (!id2) {
+      return 'No id found in maps for last onset: ' + this.lastOnsetIdx(maps);
+    }
+    let el2 = this.getElementForId(id2)?.querySelector('.notehead use');
+    if (!el2) {
+      return 'No notehead found for id2: ' + id2;
+    }
     this._lstX = this.svg2screen(parseFloat(el2.getAttribute('x')));
     console.debug('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
 
@@ -109,6 +122,8 @@ class ScoreWarper {
         this._onsetSVGXs.push(this.time2svg(t));
       }
     });
+
+    return 'ok';
   } // loadMaps()
 
   /**
@@ -312,6 +327,19 @@ class ScoreWarper {
     this.loadMaps(maps);
     this._maps = maps;
   } // set maps()
+
+  /**
+   * A function to set maps with a return value
+   * @returns {string} error message, if any, or 'ok' if all successful
+   * @param {Object} maps
+   */
+  setMaps(maps) {
+    let msg = this.loadMaps(maps);
+    if (msg === 'ok') {
+      this._maps = maps;
+    }
+    return msg;
+  } // setMaps()
 
   /**
    * Set svgObj (the SVG element)
