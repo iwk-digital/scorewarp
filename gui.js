@@ -6,7 +6,7 @@
  */
 
 // Default variables
-const dateString = 'Demo version, 11 April 2025';
+const dateString = 'Demo version, 13 April 2025';
 const svgNS = 'http://www.w3.org/2000/svg';
 
 let meiFileName = '';
@@ -170,7 +170,7 @@ async function loadMEIfromLocalFile(file) {
 /**
  * Load maps file locally
  */
-function loadLocalMapsFile(mapsFile) {
+async function loadLocalMapsFile(mapsFile) {
   return new Promise((resolve, reject) => {
     if (mapsFile) {
       mapsFileName = mapsFile.name;
@@ -582,9 +582,10 @@ function toggleRedLines() {
 } // toggleRedLines()
 
 /**
- * Handle the files of the input #fileInput, check whether there is
- * one MEI file and at least one maps file, load them, warp them,
- * and download the warped SVG.
+ * Handle the files of the input #fileInput or #dropArea,
+ * check whether there is one MEI file and at least one maps file,
+ * load them, warp them, and download the warped SVGs in one
+ * zip file.
  * @param {Event} event - the event triggered by the file input
  * @returns {void}
  * @description
@@ -621,23 +622,24 @@ async function handleLocalFiles(event) {
   meiFileName = meiFile.name;
   await loadMEIfromLocalFile(meiFile);
 
+  // https://stuk.github.io/jszip/
   let zip = new JSZip();
   let zipFileName = meiFileName.replace('.mei', '-ScoreWarped.zip');
   console.log('Creating ZIP file: ', zipFileName);
 
-  mapsFiles.forEach(async (mapsFile) => {
-    clearAllLines();
+  // Add maps files to ZIP
+  for (let j = 0; j < mapsFiles.length; j++) {
+    let mapsFile = mapsFiles[j];
+    loadMEI(false); // reload MEI file and clear lines
     await loadLocalMapsFile(mapsFile);
-    setTimeout(() => warp(), 10);
-    let svgName = meiFile.name + '-' + mapsFile.name + '.svg';
+    warp();
 
+    let svgName = `${meiFile.name}-${mapsFile.name}.svg`;
     zip.file(svgName, new XMLSerializer().serializeToString(scoreWarper.svgObj));
     console.log('Added to zip: ', svgName);
+  }
 
-    // TODO: zip file still empty, check:
-    // https://stuk.github.io/jszip/
-  });
-
+  // Generate and save ZIP file
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     console.log('Saving ZIP file with fileSaver.js: ', zipFileName);
     saveAs(content, zipFileName);

@@ -1,20 +1,20 @@
 #header {
-    background-color: lightblue;
-    padding: 5px;
-    text-align: center;
-    display: flex;
-    justify-content: flex-start;
-    align-items: start;
-    flex-direction: row;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    border: 1px solid darkgray;
+  background-color: lightblue;
+  padding: 5px;
+  text-align: center;
+  display: flex;
+  justify-content: flex-start;
+  align-items: start;
+  flex-direction: row;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  border: 1px solid darkgray;
 }
 
 .headerItem {
-    font-weight: bold;
-    padding: 15px;
-    margin: 10px;
+  font-weight: bold;
+  /* padding: 5px; */
+  margin: 8px;
 }
 
 .presentationPanel {
@@ -36,17 +36,17 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
- }
-
-#dragNdrop:hover {
-  background-color: rgb(230, 173, 222);
 }
-#dragNdrop:active {
+
+#dropArea:drop {
+  background-color: rgb(211, 160, 204);
+}
+#dropArea:active {
   background-color: lightgreen;
 }
-#dragNdrop:focus {
+#dropArea:focus {
   outline: none;
 }
-#dragNdrop:focus-visible {
+#dropArea:focus-visible {
   outline: 2px solid blue;
 }
