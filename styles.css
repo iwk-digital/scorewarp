@@ -38,9 +38,10 @@
   align-items: center;
 }
 
-.dragover {
+#dropArea.dragover {
   background-color: #8ec499;
   border-color: #478529;
+  border-width: 2px;
 }
 
 #taskList {

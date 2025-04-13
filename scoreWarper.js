@@ -181,30 +181,32 @@ class ScoreWarper {
    * Adjusts individual notes in a chord. To be run after calling warp().
    */
   warpIndividualNotes() {
-    // iterate over all notes in the maps file
-    this._maps.forEach((item, i) => {
-      if (i >= this.firstOnsetIdx(this._maps) && i <= this.lastOnsetIdx(this._maps)) {
-        let onsetSVGx = this.time2svg(item.obs_mean_onset);
-        item.xml_id.forEach((id) => {
-          let note = this.getElementForId(id);
-          if (note) {
-            let xTranslate = note.transform.baseVal;
-            let xShift = 0;
-            if (xTranslate.length > 0) {
-              xShift = xTranslate.getItem(0).matrix.e;
+    if (this._maps) {
+      // iterate over all notes in the maps file
+      this._maps.forEach((item, i) => {
+        if (i >= this.firstOnsetIdx(this._maps) && i <= this.lastOnsetIdx(this._maps)) {
+          let onsetSVGx = this.time2svg(item.obs_mean_onset);
+          item.xml_id.forEach((id) => {
+            let note = this.getElementForId(id);
+            if (note) {
+              let xTranslate = note.transform.baseVal;
+              let xShift = 0;
+              if (xTranslate.length > 0) {
+                xShift = xTranslate.getItem(0).matrix.e;
+              } else {
+                xShift = note.closest('.chord')?.transform.baseVal.getItem(0).matrix.e;
+              }
+              let notehead = note.querySelector('g.notehead');
+              let noteheadBB = notehead?.getBBox();
+              let noteX = noteheadBB.x + xShift; // + noteHeadBB.width / 2;
+              this.#translate(note, onsetSVGx - noteX);
             } else {
-              xShift = note.closest('.chord')?.transform.baseVal.getItem(0).matrix.e;
+              console.debug('No note element found: ', id);
             }
-            let notehead = note.querySelector('g.notehead');
-            let noteheadBB = notehead?.getBBox();
-            let noteX = noteheadBB.x + xShift; // + noteHeadBB.width / 2;
-            this.#translate(note, onsetSVGx - noteX);
-          } else {
-            console.debug('No note element found: ', id);
-          }
-        });
-      }
-    });
+          });
+        }
+      });
+    }
   } // adjustIndividualNotes()
 
   //#endregion Control Methods

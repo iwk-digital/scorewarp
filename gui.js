@@ -300,19 +300,21 @@ function drawConnectorLines(target = 'score') {
     pt.querySelectorAll('line[stroke="orange"]') // remove lines
       .forEach((item) => item.remove());
   }
-  let j = 0;
-  // plot straight lines
-  scoreWarper.maps.forEach((item, i) => {
-    if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) && i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
-      screenX = scoreWarper.time2screen(item.obs_mean_onset);
+  if (scoreWarper.maps) {
+    let j = 0;
+    // plot straight lines
+    scoreWarper.maps.forEach((item, i) => {
+      if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) && i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
+        screenX = scoreWarper.time2screen(item.obs_mean_onset);
 
-      if (target === 'score') {
-        addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
-      } else {
-        addLine(pt, screenX, screenX, y1, y2, 'orange');
+        if (target === 'score') {
+          addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
+        } else {
+          addLine(pt, screenX, screenX, y1, y2, 'orange');
+        }
       }
-    }
-  });
+    });
+  }
 } // drawConnectorLines()
 
 /**
@@ -708,7 +710,7 @@ function createTaskList(meiFile, mapsFiles) {
 
 function createTaskItem(taskNumber, taskName, status = 'planned') {
   let taskItem = document.createElement('span');
-  if (taskNumber > 0) taskItem.innerHTML = `${taskNumber}`;
+  if (taskNumber > 0) taskItem.innerHTML = `${taskNumber} `;
   taskItem.innerHTML += `${taskName}`;
   taskItem.id = `task${taskNumber}`;
   taskItem.value = status;
