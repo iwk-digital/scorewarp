@@ -8,24 +8,52 @@
 <body>
   <h1>ScoreWarp Help</h1>
   <p>
-    ScoreWarp is a toolkit for the analysis and visualization of music performance data. It allows you to warp musical
-    scores and visualize the results in an interactive way.
+    ScoreWarp is a JavaScript package that warps a score SVG produced by the [Verovio engraving
+    engine](https://verovio.org/) in order to horizontally align its elements with a given physical performance
+    timeline. This allows the warped score to be superimposed with any recorded time-series data, such as breathing,
+    heart rate, eye gaze or an audio waveform.
+  </p>
+  <p>
+    Goebl, W., & Weigl, D. M. (2025). Let’s do the ScoreWarp again! Shifting notes to performance timelines. Paper to be
+    presented at the Music Encoding Conference 2025, City University London, U.K.
+  </p>
+  <p>
+    Please refer to the [demo page](https://iwk-digital.github.io/scorewarp/) to try out its capabilities or warp your
+    own files.
   </p>
   <h2>How to use the ScoreWarp demo page</h2>
+  <h3>Load and inspect the demo files</h3>
   <ol>
     <li>Load a MEI score file and one or more MAPS files that reference the ids of the MEI file.</li>
-    <li>Select a demo piece with performances or upload your own files.</li>
-    <li>Click on the "Warp" button to warp the score.</li>
-    <li>Use the "Warp notes inside chords" button to warp individual notes within chords.</li>
+    <li>
+      Click on the "Warp" button to warp the score to the score event times (taking the first onset of a chord as
+      reference)
+    </li>
+    <li>
+      Use the "Warp notes inside chords" button to warp individual notes within chords. This visualises note-level
+      asynchronies, such as arpeggios or melody lead as performed by pianists.
+    </li>
     <li>Reload data if needed using the "Reload data" button.</li>
     <li>Download the warped score as an SVG file using the "Download SVG" button.</li>
-    <li>Toggle red lines to visualize the warping effect.</li>
+    <li>Toggle (switch on and off) red vertical lines inside the score to visualize the warping effect.</li>
     <li>View the warped score and performance time in the presentation panel.</li>
-    <li>Use the "Drag your files" area to upload your own MEI and MAPS files.</li>
-    <li>Check the task list for the status of your uploads.</li>
-    <li>Click on the "Toggle red lines" button to visualize the warping effect.</li>
-    <li>Click on the "Download" link to save the warped score to your browser's download folder.</li>
-    <li>Check the copyright information at the bottom of the page.</li>
+  </ol>
+  <h3>Upload and warp your own files</h3>
+  <ol>
+    <li>
+      Use the &ldquo;Warp your files&rdquo; area to upload your own MEI and MAPS files, either by drag-and-dropping the
+      files onto that area, or alternatively using the button to open a file input dialog and select the list of files
+      from your computer. Please provide exactly one MEI file and one or more MAPS files that reference the ids of the
+      MEI file. The uploaded MEI file will be converted to a one-line score SVG and warped to each of the provided MAPS
+      files. The warped scores will be compressed into a zipped file and saved to your browser's download folder. If a
+      MAPS file does not reference the MEI file, it will be ignored. For more information on the MAPS file format, see
+      below.
+    </li>
+    <li>
+      As this application is run client-side on your device, all data uploaded to the browser will stay on your machine.
+      No data or information is transferred to our servers or analyzed in any way. So, you can use copyrighted or
+      otherwise private data for processing without concerns.
+    </li>
   </ol>
   <h2>Integrate ScoreWarp to your software project</h2>
 </body>
