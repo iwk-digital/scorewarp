@@ -6,7 +6,7 @@
  */
 
 // Default variables
-const dateString = 'Demo version, 13 April 2025';
+const dateString = 'Demo version, 23 April 2025';
 const svgNS = 'http://www.w3.org/2000/svg';
 
 let meiFileName = '';
