@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite our paper from MEC 2025."
+authors:
+- family-names: "Goebl"
+  given-names: "Werner"
+  orcid: "https://orcid.org/0000-0002-1722-0718"
+- family-names: "Weigl"
+  given-names: "David M."
+  orcid: "https://orcid.org/0000-0003-1502-1528"
+contact:
+- family-names: Goebl
+  given-names: Werner
+  orcid: "https://orcid.org/0000-0002-1722-0718"
+doi: 10.5281/zenodo.11262560
+date-released: 2024-05-23
+url: "https://github.com/iwk-digital/scorewarp"
+preferred-citation:
+  authors:
+  - family-names: Goebl
+    given-names: Werner
+    orcid: "https://orcid.org/0000-0002-1722-0718"
+  - family-names: Weigl
+    given-names: David M.
+    orcid: "https://orcid.org/0000-0003-1502-1528"
+  date-published: 2025-04-29
+  doi: to-come
+  publisher:
+    name: Music Encoding Initiative
+  title: "Let’s do the ScoreWarp again! Shifting notes to performance timelines"
+  type: paper
+  url: "to come"
+  year: 2025
+title: "Let’s do the ScoreWarp again! Shifting notes to performance timelines"
