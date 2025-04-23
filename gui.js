@@ -6,7 +6,9 @@
  */
 
 // Default variables
-const dateString = 'Demo version, 23 April 2025';
+const version = '0.1.0';
+const dateString = '23 April 2025';
+const repoUrl = 'https://github.com/iwk-digital/scorewarp';
 const svgNS = 'http://www.w3.org/2000/svg';
 
 let meiFileName = '';
@@ -88,7 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // add keyboardListeners and update notation panel
   document.addEventListener('keyup', keyboardListener);
-  document.getElementById('date').innerHTML += dateString;
+
+  // show version and date
+  document.getElementById('date').innerHTML =
+    '<a href="' + repoUrl + '" target="_blank">ScoreWarp ' + version + ', ' + dateString + '</a>';
 
   document.getElementById('notation').innerHTML = '<b>Loading Verovio...</b>';
   Module.onRuntimeInitialized = async (_) => {
@@ -96,8 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tk.setOptions(tkOptions);
     tkVersion = tk.getVersion();
     console.log('Verovio ' + tkVersion + ' loaded.');
-    document.querySelector('#copyright').innerHTML += `Gratefully using
-        <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.`;
+    document.querySelector('#copyright').innerHTML += `<span>Gratefully using
+        <a href="https://www.verovio.org/">Verovio ${tkVersion}</a>.</span>`;
     document.getElementById('notation').innerHTML = `<b>Verovio ${tkVersion} loaded.</b>`;
 
     loadMEI();
@@ -754,7 +759,6 @@ function clearInputs() {
     taskList.innerHTML = ''; // clear task list
   }
 } // clearInputs()
-
 
 /**
  * Show info text about the tool
