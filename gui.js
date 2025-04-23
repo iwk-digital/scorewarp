@@ -754,3 +754,17 @@ function clearInputs() {
     taskList.innerHTML = ''; // clear task list
   }
 } // clearInputs()
+
+
+/**
+ * Show info text about the tool
+ * @param {string} text - the text to show
+ * @param {string} title - the title of the info box
+ */
+function showInfo(text, title = 'Info') {
+  let infoBox = document.getElementById('infoBox');
+  if (infoBox) {
+    infoBox.innerHTML = `<h2>${title}</h2><p>${text}</p>`;
+    infoBox.style.display = 'block';
+  }
+} // showInfo()

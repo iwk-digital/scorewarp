@@ -21,30 +21,35 @@
 
 </head>
 
-<body style="font-family:Arial, Helvetica, sans-serif">
+<body>
   <h1>Let&rsquo;s do the ScoreWarp again!</h1>
   <div id="header">
-    <form class="headerItem" name="form1" id="form1" action="#">
-      Select demo pieces with performances: <br /> <select name="piece" id="piece">
-        <option value="" selected="selected">Select a piece</option>
-      </select>
-      <select name="performance" id="performance">
-        <option value="" selected="selected">Select a performance</option>
-      </select>
-      <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
-    </form>
+    <div class="headerItem" id="demoDiv">
+      <form  name="form1" id="form1" action="#">
+        Select demo pieces with performances: <br /> <select name="piece" id="piece">
+          <option value="" selected="selected">Select a piece</option>
+        </select>
+        <select name="performance" id="performance">
+          <option value="" selected="selected">Select a performance</option>
+        </select>
+        <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>
+      </form>
+      <button onclick="warp()">1) Warp [W]</button>
+      <button onclick="warpIndividualNotes()">2) Warp notes inside chords [A]</button>
+      <button onclick="loadMEI(false)">3) Reload data [C]</button>
+      <button onclick="downloadSVG()">4) Download SVG [D]</button>
+    </div>
     <div id="dropArea" class="headerItem" title="Please provide exactly one MEI file and one or more MAPS files that reference the ids of the MEI file. The warped scores will be compressed as a zip file and saved to your browser's download folder.">
-      <img src="./upload-16.svg" alt="MDW Logo" width="32" height="32">
-      <span class="headerItem">...or warp your own files.</span>
+      <img src="./upload-16.svg" alt="Drag your files" width="32" height="32">
+      <span>...or warp your own files.</span>
       <input type="file" id="fileInput" accept=".mei,.maps,.json" multiple value="" /> 
       <div id="taskList"></div>
     </div>
+    <div id="dropInfo" class="info">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M13 7.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm-3 3.75a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v4.25h.75a.75.75 0 0 1 0 1.5h-3a.75.75 0 0 1 0-1.5h.75V12h-.75a.75.75 0 0 1-.75-.75Z"></path><path d="M12 1c6.075 0 11 4.925 11 11s-4.925 11-11 11S1 18.075 1 12 5.925 1 12 1ZM2.5 12a9.5 9.5 0 0 0 9.5 9.5 9.5 9.5 0 0 0 9.5-9.5A9.5 9.5 0 0 0 12 2.5 9.5 9.5 0 0 0 2.5 12Z"></path></svg>
+    </div>
+    <button onclick="toggleRedLines()">Toggle red lines</button>
   </div>
-  <button onclick="warp()">1) Warp [W]</button>
-  <button onclick="warpIndividualNotes()">2) Warp notes inside chords [A]</button>
-  <button onclick="loadMEI(false)">3) Reload data [C]</button>
-  <button onclick="downloadSVG()">4) Download SVG [D]</button>
-  <button onclick="toggleRedLines()">5) Toggle red lines</button>
   <a href id="downloadLink"></a>
   </p>
   <div id="notation" class="presentationPanel">
