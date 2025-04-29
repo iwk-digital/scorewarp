@@ -69,7 +69,12 @@ class ScoreWarper {
     console.debug('ScoreWarper tmn/tmx: ' + this._tmn + '/' + this._tmx);
 
     // determine global min and max screen x values of notes
-    let id1 = maps[this.firstOnsetIdx(maps)].xml_id[0];
+    let firstXmlIds = maps[this.firstOnsetIdx(maps)].xml_id;
+    // determine type of xmlIds (string or array)
+    if (typeof firstXmlIds === 'string') {
+      firstXmlIds = [firstXmlIds];
+    }
+    let id1 = firstXmlIds[0];
     if (!id1) {
       return 'No id found in maps for first onset: ' + this.firstOnsetIdx(maps);
     }
@@ -79,7 +84,12 @@ class ScoreWarper {
     }
     this._fstX = this.svg2screen(parseFloat(el1.getAttribute('x')));
 
-    let id2 = maps[this.lastOnsetIdx(maps)].xml_id[0];
+    // determine lastXmlIds (string or array)
+    let lastXmlIds = maps[this.lastOnsetIdx(maps)].xml_id;
+    if (typeof lastXmlIds === 'string') {
+      lastXmlIds = [lastXmlIds];
+    }
+    let id2 = lastXmlIds[0];
     if (!id2) {
       return 'No id found in maps for last onset: ' + this.lastOnsetIdx(maps);
     }
@@ -95,7 +105,11 @@ class ScoreWarper {
     this._noteSVGXs = []; // x values of notes in SVG
     maps.forEach((item, i) => {
       if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
-        let note = this.getElementForId(item.xml_id[0]);
+        let xmlId = item.xml_id;
+        if (typeof xmlId === 'string') {
+          xmlId = [xmlId];
+        }
+        let note = this.getElementForId(xmlId[0]);
         // console.debug(i + '; note: ', note);
         if (note) {
           // take center of note heads as x value
@@ -186,7 +200,11 @@ class ScoreWarper {
       this._maps.forEach((item, i) => {
         if (i >= this.firstOnsetIdx(this._maps) && i <= this.lastOnsetIdx(this._maps)) {
           let onsetSVGx = this.time2svg(item.obs_mean_onset);
-          item.xml_id.forEach((id) => {
+          let xmlIds = item.xml_id;
+          if (typeof xmlIds === 'string') {
+            xmlIds = [xmlIds];
+          }
+          xmlIds.forEach((id) => {
             let note = this.getElementForId(id);
             if (note) {
               let xTranslate = note.transform.baseVal;
