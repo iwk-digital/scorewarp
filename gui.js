@@ -7,7 +7,7 @@
 
 // Default variables
 const version = '0.1.0';
-const dateString = '30 April 2025';
+const dateString = '6 May 2025';
 const repoUrl = 'https://github.com/iwk-digital/scorewarp';
 const svgNS = 'http://www.w3.org/2000/svg';
 
