@@ -78,11 +78,11 @@ class ScoreWarper {
     if (!id1) {
       return 'No id found in maps for first onset: ' + this.firstOnsetIdx(maps);
     }
-    let el1 = this.getElementForId(id1)?.querySelector('.notehead use');
+    let el1 = this.getElementForId(id1)?.querySelector('.notehead');
     if (!el1) {
       return 'No notehead found for id1: ' + id1;
     }
-    this._fstX = this.svg2screen(parseFloat(el1.getAttribute('x')));
+    this._fstX = this.svg2screen(el1.getBBox().x);
 
     // determine lastXmlIds (string or array)
     let lastXmlIds = maps[this.lastOnsetIdx(maps)].xml_id;
@@ -93,11 +93,11 @@ class ScoreWarper {
     if (!id2) {
       return 'No id found in maps for last onset: ' + this.lastOnsetIdx(maps);
     }
-    let el2 = this.getElementForId(id2)?.querySelector('.notehead use');
+    let el2 = this.getElementForId(id2)?.querySelector('.notehead');
     if (!el2) {
       return 'No notehead found for id2: ' + id2;
     }
-    this._lstX = this.svg2screen(parseFloat(el2.getAttribute('x')));
+    this._lstX = this.svg2screen(el2.getBBox().x);
     console.debug('ScoreWarper first/lastNotehead x: ' + this._fstX + '/' + this._lstX);
 
     // calculate score note coordinates
@@ -113,7 +113,7 @@ class ScoreWarper {
         // console.debug(i + '; note: ', note);
         if (note) {
           // take center of note heads as x value
-          let bbox = note.querySelector('.notehead use')?.getBBox();
+          let bbox = note.querySelector('.notehead')?.getBBox();
           // console.debug('Note BBox: ', bbox);
           let noteX = bbox.x; // + bbox.width / 2;
           if (!noteX) {
@@ -672,7 +672,7 @@ class ScoreWarper {
           let x = item.getBBox().x;
           if (item.classList.contains('note')) {
             // for notes, use notehead x value (to avoid incorrect shifting with accidentals)
-            x = item.querySelector('.notehead use').getBBox().x;
+            x = item.querySelector('.notehead').getBBox().x;
           }
           let xShift = warpingFunction[Math.round(x)];
 
