@@ -312,6 +312,8 @@ function drawConnectorLines(target = 'score') {
       if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) && i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
         screenX = scoreWarper.time2screen(item.obs_mean_onset);
 
+        console.log('drawConnectorLines: i=' + i + ', screenX=' + screenX + ', j=' + j);
+
         if (target === 'score') {
           addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
         } else {

@@ -103,6 +103,7 @@ class ScoreWarper {
     // calculate score note coordinates
     this._noteXs = []; // x values of notes on screen
     this._noteSVGXs = []; // x values of notes in SVG
+    this._noteOnsets = []; // onset times of notes in seconds
     maps.forEach((item, i) => {
       if (i >= this.firstOnsetIdx(maps) && i <= this.lastOnsetIdx(maps)) {
         let xmlId = item.xml_id;
@@ -119,10 +120,14 @@ class ScoreWarper {
           if (!noteX) {
             console.warn('Note without notehead: ', note);
           }
+          if (noteX == undefined || noteX == null) {
+            console.warn('Note with undefined/null noteX: ', note);
+          }
           this._noteSVGXs.push(noteX); // pure SVG x values (without page-margin)
           this._noteXs.push(this.svg2screen(noteX));
+          this._noteOnsets.push(item.obs_mean_onset); // onset time in seconds
         } else {
-          console.debug(i + '; note: NOT FOUND');
+          console.debug(i + '; note ' + xmlId[0] + ': NOT FOUND');
         }
       }
     });
