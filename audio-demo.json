@@ -1,0 +1,18 @@
+[
+  {
+    "svgUri": "https://raw.githubusercontent.com/iwk-digital/scorewarp/refs/heads/main/warpedSvg/Chopin_Op10_3_1.mei-Chopin_op10_no3_p01-mei.maps.json.svg",
+    "audioUri": "./audio/Chopin_op10_no3_p01.wav"
+  },
+  {
+    "svgUri": "https://raw.githubusercontent.com/iwk-digital/scorewarp/refs/heads/main/warpedSvg/Chopin_Op10_3_1.mei-Chopin_op10_no3_p06-mei.maps.json.svg",
+    "audioUri": "./audio/Chopin_op10_no3_p06.wav"
+  },
+  {
+    "svgUri": "https://raw.githubusercontent.com/iwk-digital/scorewarp/refs/heads/main/warpedSvg/Chopin_Op10_3_1.mei-Chopin_op10_no3_p10-mei.maps.json.svg",
+    "audioUri": "./audio/Chopin_op10_no3_p10.wav"
+  },
+  {
+    "svgUri": "https://raw.githubusercontent.com/iwk-digital/scorewarp/refs/heads/main/warpedSvg/Chopin_Op10_3_1.mei-Chopin_op10_no3_p22-mei.maps.json.svg",
+    "audioUri": "./audio/Chopin_op10_no3_p22.wav"
+  }
+]
