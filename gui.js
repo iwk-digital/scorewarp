@@ -484,7 +484,7 @@ function drawTimeAxis(node, toScreen = true, y = y0basis, color = 'black') {
     if (t == 0) {
       // draw horizontal axis and axis label
       toScreen ? (s2 = scoreWarper.time2screen(lastTick)) : scoreWarper.time2svg(lastTick);
-      addLine(g, s, s2, y, y, color, 1);
+      addLine(g, s, s2, y, y, color, 1, 'horizontalAxis');
       addText(g, 'Time (s)', 1, y - 4, 'left', color);
     }
   }
@@ -668,7 +668,7 @@ async function handleLocalFiles(event) {
   });
 } // handleLocalFiles()
 
-function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
+function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1, className = '') {
   const line = document.createElementNS(svgNS, 'line');
   line.setAttribute('x1', x1);
   line.setAttribute('x2', x2);
@@ -677,6 +677,9 @@ function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
   line.setAttribute('stroke-width', strokeWidth);
   line.setAttribute('stroke-linecap', 'round');
   line.setAttribute('stroke', color);
+  if (className) {
+    line.classList.add(className);
+  }
   return node.appendChild(line);
 } // addLine()
 
