@@ -1,5 +1,7 @@
 import WaveSurfer from './deps/wavesurfer.js';
 
+const cursorOffset = 0.4; // nudge score slightly to the right to align with wavesurfer cursor
+
 let wavesurfers = {};
 
 function createWaveSurfer(url, pixelsPerSecond) {
@@ -27,12 +29,11 @@ function createWaveSurfer(url, pixelsPerSecond) {
     let hAxisX1 = parseFloat(horizontalAxis.getAttribute('x1'));
     let elapsedOnScore = time * pixelsPerSecond + hAxisX1; //elapsed * hAxisWidth + hAxisX1;
     const playbackCursor = score.querySelector('.playbackCursor');
-    // update the playback cursor position (+1 to align better with wavesurfer cursor)
-    playbackCursor.setAttribute('x1', elapsedOnScore + 1);
-    playbackCursor.setAttribute('x2', elapsedOnScore + 1);
-    // Update horizontal and vertical scroll position to keep the playback cursor in view
+    // +.3 to better align with the wavesurfer cursor
+    playbackCursor.setAttribute('x1', elapsedOnScore + cursorOffset);
+    playbackCursor.setAttribute('x2', elapsedOnScore + cursorOffset);
+    // Update horizontal scroll position to keep the playback cursor in view
     document.body.scrollLeft = playbackCursor.getBoundingClientRect().left - window.innerWidth / 2;
-    document.body.scrollTop = playbackCursor.getBoundingClientRect().top - window.innerHeight / 2;
   });
 
   wavesurfer.load(url);
@@ -54,10 +55,20 @@ async function fetchSvg(svgUri) {
 
 function addCursorToScore(score) {
   const cursor = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  // align with the second text node in the timeAxis, i.e. the 0 label
+  let x1;
+  let texts = score.querySelectorAll('.timeAxis text');
+  if (texts.length < 2) {
+    console.error('Not enough text elements in timeAxis to align playback cursor, defaulting to 0');
+    x1 = 0; // default to 0 if not enough text elements
+  } else {
+    x1 = parseFloat(texts[1].getAttribute('x'));
+  }
+  // add a small offset to the x1 value to align with the wavesurfer cursor
   cursor.setAttribute('class', 'playbackCursor');
-  cursor.setAttribute('x1', '0');
+  cursor.setAttribute('x1', x1 + cursorOffset + 'px');
   cursor.setAttribute('y1', '0');
-  cursor.setAttribute('x2', '0');
+  cursor.setAttribute('x2', x1 + cursorOffset + 'px');
   cursor.setAttribute('y2', '100%');
   cursor.setAttribute('stroke', 'red');
   cursor.setAttribute('stroke-width', '1');
@@ -83,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // load the SVG
         score.innerHTML = await fetchSvg(svgUri);
         score.id = 'score-' + audioUri;
+        addCursorToScore(score);
         // Create a div for wavesurfer audio
         const audio = document.createElement('div');
         audio.className = 'audio';
@@ -90,16 +102,18 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(audio);
         container.appendChild(score);
         // Add playback cursor to the score
-        addCursorToScore(score);
         document.getElementById('score-audio-containers').appendChild(container);
-        console.log('Score: ', score);
         const x1 = score.querySelector('.horizontalAxis').getAttribute('x1');
         const x2 = score.querySelector('.horizontalAxis').getAttribute('x2');
         const width = parseInt(x2) - parseInt(x1);
         // scale the width to fit the audio duration
         // first, obtain last 'text' (axis label) element from the timeAxis
-        console.log('working with score:', score);
-        const lastText = score.querySelector('.timeAxis text:last-child');
+        const texts = score.querySelectorAll('.timeAxis text');
+        if (texts.length === 0) {
+          console.error('No timeAxis text elements found in the score.');
+          continue;
+        }
+        const lastText = texts[texts.length - 1];
         // obtain its value
         const lastSecondsMarkerValue = parseFloat(lastText.textContent);
         // use this to calculate the number of pixels per second in the SVG
@@ -116,6 +130,11 @@ document.addEventListener('DOMContentLoaded', function () {
         createWaveSurfer(audioUri, pixelsPerSecond);
         audio.style.marginLeft = x1 + 'px';
         container.addEventListener('click', function (event) {
+          // scroll vertically to ensure the top and bottom of the container are visible
+          console.log('Container clicked:', container);
+          // Scroll the container into view
+          document.body.scrollTop = container.getBoundingClientRect().top + window.scrollY - 20;
+
           // Pause all other wavesurfers
           for (const key in wavesurfers) {
             if (key !== audioUri && wavesurfers[key].isPlaying()) {
