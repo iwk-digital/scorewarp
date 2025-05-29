@@ -6,8 +6,8 @@
  */
 
 // Default variables
-const version = '0.1.0';
-const dateString = '7 May 2025';
+const version = '0.1.1';
+const dateString = '29 May 2025';
 const repoUrl = 'https://github.com/iwk-digital/scorewarp';
 const svgNS = 'http://www.w3.org/2000/svg';
 
@@ -31,6 +31,7 @@ let warped = false; // whether or not the score has been warped
 let pieceSel; // selection element for pieces
 let perfSel; // selection element for performances
 let showRedLines = true; // whether or not to show red lines in the score
+let showWarpFunction = false; // whether or not to show the warping function in the score
 
 /**
  * This function is called when the DOM is fully loaded.
@@ -361,9 +362,19 @@ function drawLinesInScore() {
  * @param {Array} warpFunc - the warping function
  */
 function drawWarpFunction(node, warpFunc) {
+  if (!node) {
+    console.warn('No node provided to drawWarpFunction.');
+    return;
+  }
+  // remove existing warp functions
+  clearWarpFunction(node);
+
+  // create a group element for the warp function
   const g = document.createElementNS(svgNS, 'g'); // warp function in notation
   g.setAttribute('class', 'warpFunction');
   node.appendChild(g);
+
+  // compute min and max values of warpFunc
   let mn = Number.MAX_VALUE;
   let mx = 0;
   warpFunc.forEach((item) => {
@@ -378,6 +389,19 @@ function drawWarpFunction(node, warpFunc) {
     addCircle(g, i, item * scale + translate, 3, 'red');
   });
 } // drawWarpFunction()
+
+/**
+ * Clears warp function from notation panel
+ * @param {Element} node - the parent node from which the warp function will be removed
+ */
+function clearWarpFunction(node) {
+  if (!node) {
+    console.warn('No node provided to clearWarpFunction.');
+    return;
+  }
+  // remove existing warp functions
+  node.querySelectorAll('.warpFunction').forEach((item) => item.remove());
+} // clearWarpFunction()
 
 /**
  * Clears all lines from the performanceTime panel
@@ -442,11 +466,13 @@ function loadPerformanceTiming(maps) {
 
   // for DEBUGGING: plot warping function...
   if (showRedLines) {
-    // let pageMarginElement = document.querySelector('.page-margin');
-    // drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
-
-    // downloadSVG(serializer.serializeToString(scoreWarper.svgObj));
     drawLinesInScore();
+  }
+  if (showWarpFunction) {
+    let pageMarginElement = document.querySelector('.page-margin');
+    if (pageMarginElement) {
+      drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
+    }
   }
 } // loadPerformanceTiming()
 
@@ -594,6 +620,23 @@ function toggleRedLines() {
     clearLinesInScore();
   }
 } // toggleRedLines()
+
+/**
+ * Toggle the visibility of the warping function in the score
+ */
+function toggleWarpFunction() {
+  showWarpFunction = !showWarpFunction;
+  let pageMarginElement = document.querySelector('.page-margin');
+  if (pageMarginElement) {
+    if (showWarpFunction) {
+      drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
+    } else {
+      clearWarpFunction(pageMarginElement);
+    }
+  } else {
+    console.warn('No page margin element found in the score.');
+  }
+} // toggleWarpFunction()
 
 /**
  * Handle the files of the input #fileInput or #dropArea,
