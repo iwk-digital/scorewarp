@@ -11,7 +11,7 @@ function createWaveSurfer(url, pixelsPerSecond) {
     progressColor: 'cornflowerblue',
     cursorColor: 'red',
     responsive: true,
-    interact: false,
+    interact: true,
     width: '100%',
   };
 
@@ -33,7 +33,7 @@ function createWaveSurfer(url, pixelsPerSecond) {
     playbackCursor.setAttribute('x1', elapsedOnScore + cursorOffset);
     playbackCursor.setAttribute('x2', elapsedOnScore + cursorOffset);
     // Update horizontal scroll position to keep the playback cursor in view
-    document.body.scrollLeft = playbackCursor.getBoundingClientRect().left - window.innerWidth / 2;
+    document.body.scrollLeft = elapsedOnScore - window.innerWidth / 2 + cursorOffset;
   });
 
   wavesurfer.load(url);
@@ -89,6 +89,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Create a new div for the wavesurfer container
         const container = document.createElement('div');
         container.className = 'score-audio-container';
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = item.audioUri.split('/').pop(); // Get the last part of the audioUri
+        // remove the file extension from the label
+        label.textContent = label.textContent.replace(/\.[^/.]+$/, '');
         const score = document.createElement('div');
         score.className = 'score';
         // load the SVG
@@ -99,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const audio = document.createElement('div');
         audio.className = 'audio';
         audio.id = audioUri;
+        container.appendChild(label);
         container.appendChild(audio);
         container.appendChild(score);
         // Add playback cursor to the score
