@@ -1,6 +1,7 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: #f0f0f0;
+  overflow: hidden;
 }
 
 #header {
@@ -123,6 +124,12 @@ body {
 
 /* score-audio-containers should be used to group audio elements */
 /* stacked vertically and styled to be visually appealing */
+
+#score-audio-containers { 
+  width: 100%;
+  height: 90%;
+  overflow: scroll;
+}
 
 .score-audio-container {
   margin-bottom: 2em;

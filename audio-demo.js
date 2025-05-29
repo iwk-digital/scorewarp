@@ -33,7 +33,8 @@ function createWaveSurfer(url, pixelsPerSecond) {
     playbackCursor.setAttribute('x1', elapsedOnScore + cursorOffset);
     playbackCursor.setAttribute('x2', elapsedOnScore + cursorOffset);
     // Update horizontal scroll position to keep the playback cursor in view
-    document.body.scrollLeft = elapsedOnScore - window.innerWidth / 2 + cursorOffset;
+    document.getElementById('score-audio-containers').scrollLeft =
+      elapsedOnScore - window.innerWidth / 2 + cursorOffset;
   });
 
   wavesurfer.load(url);
@@ -139,7 +140,14 @@ document.addEventListener('DOMContentLoaded', function () {
           // scroll vertically to ensure the top and bottom of the container are visible
           console.log('Container clicked:', container);
           // Scroll the container into view
-          document.body.scrollTop = container.getBoundingClientRect().top + window.scrollY - 20;
+          container.scrollIntoView({
+            block: 'start',
+            inline: 'nearest',
+          });
+          // ensure the body is scrolled to the top of the page
+          document.body.scrollTop = 0;
+          //document.getElementById('score-audio-containers').scrollTop =
+          //  container.getBoundingClientRect().top + window.scrollY;
 
           // Pause all other wavesurfers
           for (const key in wavesurfers) {
