@@ -26,7 +26,7 @@ let tkOptions = {
 };
 
 let svgString; // raw SVG text string of engraved MEI file
-let scoreWarper; // score warper object
+let scoreWarper = null; // score warper object
 let warped = false; // whether or not the score has been warped
 let pieceSel; // selection element for pieces
 let perfSel; // selection element for performances
@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
       handleLocalFiles({ target: { files } });
     }
   });
+
+  showRedLines = document.getElementById('showRedLines').checked;
+  showWarpFunction = document.getElementById('showWarpingFunction').checked;
 
   clearInputs();
 
@@ -327,31 +330,33 @@ function drawConnectorLines(target = 'score') {
  * Draws red lines inside SVG (for debugging) into a separate line container group
  */
 function drawLinesInScore() {
-  let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
-  if (definitionScaleElement) {
-    let transforms = definitionScaleElement.querySelector('.page-margin')?.transform;
-    //definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
-    let lineContainer = definitionScaleElement.querySelector('.lineContainer');
-    if (!lineContainer) {
-      lineContainer = document.createElementNS(svgNS, 'g');
-      lineContainer.classList.add('lineContainer');
+  if (scoreWarper && scoreWarper.svgObj) {
+    let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
+    if (definitionScaleElement) {
+      let transforms = definitionScaleElement.querySelector('.page-margin')?.transform;
+      //definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
+      let lineContainer = definitionScaleElement.querySelector('.lineContainer');
+      if (!lineContainer) {
+        lineContainer = document.createElementNS(svgNS, 'g');
+        lineContainer.classList.add('lineContainer');
 
-      let matrix = transforms.baseVal.getItem(0).matrix;
-      let newTranslate = scoreWarper._svgObj.createSVGTransform();
-      newTranslate.setTranslate(matrix.e + scoreWarper.noteheadWidth / 2, 0);
-      lineContainer.transform.baseVal.appendItem(newTranslate);
+        let matrix = transforms.baseVal.getItem(0).matrix;
+        let newTranslate = scoreWarper._svgObj.createSVGTransform();
+        newTranslate.setTranslate(matrix.e + scoreWarper.noteheadWidth / 2, 0);
+        lineContainer.transform.baseVal.appendItem(newTranslate);
 
-      definitionScaleElement.appendChild(lineContainer);
-    }
-    if (!warped) {
-      scoreWarper.noteSVGXs.forEach((item) => {
-        addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-      });
-    } else {
-      // this is for warped notes, probably never called
-      scoreWarper.onsetSVGXs.forEach((item) => {
-        addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-      });
+        definitionScaleElement.appendChild(lineContainer);
+      }
+      if (!warped) {
+        scoreWarper.noteSVGXs.forEach((item) => {
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      } else {
+        // this is for warped notes, probably never called
+        scoreWarper.onsetSVGXs.forEach((item) => {
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      }
     }
   }
 } // drawLinesInScore()
