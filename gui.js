@@ -393,7 +393,7 @@ function drawWarpFunction(node, warpFunc) {
   let translate = 1000; // svgViewBox[3] / 2;
   console.info('drawWarpFunction: scale/trnsl: ' + scale + '/' + translate);
   warpFunc.forEach((item, i) => {
-    addCircle(g, i, item * scale + translate, 3, 'red');
+    addCircle(g, i, item * scale + translate, 10, 'blue');
   });
 } // drawWarpFunction()
 
@@ -738,8 +738,9 @@ function addCircle(node, cx, cy, r, color = 'black', strokeWidth = 1) {
   circle.setAttribute('cx', cx);
   circle.setAttribute('cy', cy);
   circle.setAttribute('r', r);
-  circle.setAttribute('stroke-width', strokeWidth);
+  circle.setAttribute('fill', color);
   circle.setAttribute('stroke', color);
+  circle.setAttribute('stroke-width', strokeWidth);
   return node.appendChild(circle);
 } // addCircle()
 
