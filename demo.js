@@ -37,6 +37,7 @@ const demoFiles = {
   'Beethoven Op31_No2_2': {
     meiFile:
       'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No2_HenleUrtext/master/Beethoven_Op31_No2_2-HenleUrtext.mei',
+    expansion: 'expansion-default',
     performances: {
       'Op31-No2_2 D1': './maps/REC041_12-19_1133.boe.mid.maps.expansion-default.json',
       'Op31-No2_2 D2': './maps/REC042_12-19_1153.boe.mid.maps.expansion-default.json',
@@ -46,7 +47,8 @@ const demoFiles = {
   },
   'Beethoven Op31_No3_1': {
     meiFile:
-      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_1-HenleUrtext.mei',
+      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_1-HenleUrtext-expanded.mei',
+    expansion: 'expansion-default',
     performances: {
       'Op31-No3_1 P01 Performance A': './maps/Op31_No3_1_P01-A.boe.mid.maps.expansion-default.json',
       'Op31-No3_1 P01 Performance B': './maps/Op31_No3_1_P01-B.boe.mid.maps.expansion-default.json',
@@ -61,7 +63,8 @@ const demoFiles = {
   },
   'Beethoven Op31_No3_2': {
     meiFile:
-      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_2-HenleUrtext.mei',
+      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_2-HenleUrtext-expanded.mei',
+    expansion: 'expansion-default',
     performances: {
       'Op31-No3_2 P01 Performance A': './maps/Op31_No3_2_P01-A.boe.mid.maps.expansion-default.json',
       'Op31-No3_2 P01 Performance B': './maps/Op31_No3_2_P01-B.boe.mid.maps.expansion-default.json',
@@ -77,7 +80,8 @@ const demoFiles = {
   },
   'Beethoven Op31_No3_3': {
     meiFile:
-      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_3-HenleUrtext.mei',
+      'https://raw.githubusercontent.com/trompamusic-encodings/Beethoven_Op31_No3_HenleUrtext/master/Beethoven_Op31_No3_3-HenleUrtext-expanded.mei',
+    expansion: 'expansion-default',
     performances: {
       'Op31-No3_3 P01 Performance A': './maps/Op31_No3_3_P01-A.boe.mid.maps.expansion-default.json',
       'Op31-No3_3 P01 Performance B': './maps/Op31_No3_3_P01-B.boe.mid.maps.expansion-default.json',
