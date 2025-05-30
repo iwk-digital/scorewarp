@@ -301,6 +301,8 @@ let yMx = 140; // mx y of performance panel
 /**
  * Draw orange lines, to connect to 'score' or to performed 'notes'
  * @param {string} target - 'score' or 'notes'
+ * 
+ * TODO: display also missing omitted notes (e.g. grey noteheads) and inserted notes (played but not in score)
  */
 function drawConnectorLines(target = 'score') {
   // 'chords', 'notes'
@@ -309,20 +311,18 @@ function drawConnectorLines(target = 'score') {
     pt.querySelectorAll('line[stroke="orange"]') // remove lines
       .forEach((item) => item.remove());
   }
-  if (scoreWarper.maps) {
-    let j = 0;
-    // plot straight lines
-    scoreWarper.maps.forEach((item, i) => {
-      if (i >= scoreWarper.firstOnsetIdx(scoreWarper.maps) && i <= scoreWarper.lastOnsetIdx(scoreWarper.maps)) {
-        screenX = scoreWarper.time2screen(item.obs_mean_onset);
+  if (scoreWarper.noteXs && scoreWarper.noteXs.length > 0) {
+    // plot straight/tilted connector lines
+    scoreWarper.noteXs.forEach((item, i) => {
+      let noteOnset = scoreWarper.noteOnsets[i];
+      screenX = scoreWarper.time2screen(noteOnset);
 
-        console.log('drawConnectorLines: i=' + i + ', screenX=' + screenX + ', j=' + j);
+      console.log('drawConnectorLines: i=' + i + ', screenX=' + screenX + ', noteX=' + item);
 
-        if (target === 'score') {
-          addLine(pt, screenX, scoreWarper.noteXs[j++], y1, y2, 'orange');
-        } else {
-          addLine(pt, screenX, screenX, y1, y2, 'orange');
-        }
+      if (target === 'score') {
+        addLine(pt, screenX, item, y1, y2, 'orange');
+      } else {
+        addLine(pt, screenX, screenX, y1, y2, 'orange');
       }
     });
   }

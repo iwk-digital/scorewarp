@@ -265,6 +265,13 @@ class ScoreWarper {
   } // get noteheadWidth()
 
   /**
+   * Get noteOnsets (onset times of notes in seconds)
+   */
+  get noteOnsets() {
+    return this._noteOnsets;
+  } // get noteOnsets()
+
+  /**
    * Get noteXs (x values of notes on screen)
    */
   get noteXs() {
