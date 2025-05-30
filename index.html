@@ -7,8 +7,8 @@
 
     <!-- Load Verovio toolkit -->
     <!-- <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js" defer></script> -->
-    <script src="https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js" defer></script>
-    <!-- <script src="https://www.verovio.org/javascript/version-5.2.0/verovio-toolkit-hum.js" defer></script> -->
+    <!-- <script src="https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js" defer></script> -->
+    <script src="https://www.verovio.org/javascript/5.2.0/verovio-toolkit-wasm.js" defer></script>
     
     <!-- Load the script files -->
     <script src="./gui.js"></script>
@@ -44,8 +44,12 @@
       <fieldset class="headerItem" id="warpOptions">
         <legend><b>Warp options</b></legend>
         <span>
-          <input type="checkbox" id="redlines" onclick="toggleRedLines()" checked="true" />
-          <label for="redlines">Red lines in score</label>
+          <input type="checkbox" id="showRedLines" onclick="toggleRedLines()" />
+          <label for="showRedLines">Red lines in score</label>
+        </span>
+        <span>
+          <input type="checkbox" id="showWarpingFunction" onclick="toggleWarpFunction()" />
+          <label for="showWarpingFunction">Show interpolation function</label>
         </span>
         <span class="disabled">
           <input type="checkbox" id="greyNotes" disabled="true" />

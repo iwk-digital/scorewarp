@@ -6,8 +6,8 @@
  */
 
 // Default variables
-const version = '0.1.0';
-const dateString = '7 May 2025';
+const version = '0.1.1';
+const dateString = '29 May 2025';
 const repoUrl = 'https://github.com/iwk-digital/scorewarp';
 const svgNS = 'http://www.w3.org/2000/svg';
 
@@ -26,11 +26,12 @@ let tkOptions = {
 };
 
 let svgString; // raw SVG text string of engraved MEI file
-let scoreWarper; // score warper object
+let scoreWarper = null; // score warper object
 let warped = false; // whether or not the score has been warped
 let pieceSel; // selection element for pieces
 let perfSel; // selection element for performances
 let showRedLines = true; // whether or not to show red lines in the score
+let showWarpFunction = false; // whether or not to show the warping function in the score
 
 /**
  * This function is called when the DOM is fully loaded.
@@ -64,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
       handleLocalFiles({ target: { files } });
     }
   });
+
+  showRedLines = document.getElementById('showRedLines').checked;
+  showWarpFunction = document.getElementById('showWarpingFunction').checked;
 
   clearInputs();
 
@@ -328,31 +332,33 @@ function drawConnectorLines(target = 'score') {
  * Draws red lines inside SVG (for debugging) into a separate line container group
  */
 function drawLinesInScore() {
-  let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
-  if (definitionScaleElement) {
-    let transforms = definitionScaleElement.querySelector('.page-margin')?.transform;
-    //definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
-    let lineContainer = definitionScaleElement.querySelector('.lineContainer');
-    if (!lineContainer) {
-      lineContainer = document.createElementNS(svgNS, 'g');
-      lineContainer.classList.add('lineContainer');
+  if (scoreWarper && scoreWarper.svgObj) {
+    let definitionScaleElement = scoreWarper.svgObj.querySelector('.definition-scale');
+    if (definitionScaleElement) {
+      let transforms = definitionScaleElement.querySelector('.page-margin')?.transform;
+      //definitionScaleElement.querySelector('.page-margin')?.getAttribute('transform');
+      let lineContainer = definitionScaleElement.querySelector('.lineContainer');
+      if (!lineContainer) {
+        lineContainer = document.createElementNS(svgNS, 'g');
+        lineContainer.classList.add('lineContainer');
 
-      let matrix = transforms.baseVal.getItem(0).matrix;
-      let newTranslate = scoreWarper._svgObj.createSVGTransform();
-      newTranslate.setTranslate(matrix.e + scoreWarper.noteheadWidth / 2, 0);
-      lineContainer.transform.baseVal.appendItem(newTranslate);
+        let matrix = transforms.baseVal.getItem(0).matrix;
+        let newTranslate = scoreWarper._svgObj.createSVGTransform();
+        newTranslate.setTranslate(matrix.e + scoreWarper.noteheadWidth / 2, 0);
+        lineContainer.transform.baseVal.appendItem(newTranslate);
 
-      definitionScaleElement.appendChild(lineContainer);
-    }
-    if (!warped) {
-      scoreWarper.noteSVGXs.forEach((item) => {
-        addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-      });
-    } else {
-      // this is for warped notes, probably never called
-      scoreWarper.onsetSVGXs.forEach((item) => {
-        addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
-      });
+        definitionScaleElement.appendChild(lineContainer);
+      }
+      if (!warped) {
+        scoreWarper.noteSVGXs.forEach((item) => {
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      } else {
+        // this is for warped notes, probably never called
+        scoreWarper.onsetSVGXs.forEach((item) => {
+          addLine(lineContainer, item, item, scoreWarper.svgViewBox[3], 0, 'red', 20);
+        });
+      }
     }
   }
 } // drawLinesInScore()
@@ -363,9 +369,19 @@ function drawLinesInScore() {
  * @param {Array} warpFunc - the warping function
  */
 function drawWarpFunction(node, warpFunc) {
+  if (!node) {
+    console.warn('No node provided to drawWarpFunction.');
+    return;
+  }
+  // remove existing warp functions
+  clearWarpFunction(node);
+
+  // create a group element for the warp function
   const g = document.createElementNS(svgNS, 'g'); // warp function in notation
   g.setAttribute('class', 'warpFunction');
   node.appendChild(g);
+
+  // compute min and max values of warpFunc
   let mn = Number.MAX_VALUE;
   let mx = 0;
   warpFunc.forEach((item) => {
@@ -380,6 +396,19 @@ function drawWarpFunction(node, warpFunc) {
     addCircle(g, i, item * scale + translate, 3, 'red');
   });
 } // drawWarpFunction()
+
+/**
+ * Clears warp function from notation panel
+ * @param {Element} node - the parent node from which the warp function will be removed
+ */
+function clearWarpFunction(node) {
+  if (!node) {
+    console.warn('No node provided to clearWarpFunction.');
+    return;
+  }
+  // remove existing warp functions
+  node.querySelectorAll('.warpFunction').forEach((item) => item.remove());
+} // clearWarpFunction()
 
 /**
  * Clears all lines from the performanceTime panel
@@ -444,11 +473,13 @@ function loadPerformanceTiming(maps) {
 
   // for DEBUGGING: plot warping function...
   if (showRedLines) {
-    // let pageMarginElement = document.querySelector('.page-margin');
-    // drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
-
-    // downloadSVG(serializer.serializeToString(scoreWarper.svgObj));
     drawLinesInScore();
+  }
+  if (showWarpFunction) {
+    let pageMarginElement = document.querySelector('.page-margin');
+    if (pageMarginElement) {
+      drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
+    }
   }
 } // loadPerformanceTiming()
 
@@ -486,7 +517,7 @@ function drawTimeAxis(node, toScreen = true, y = y0basis, color = 'black') {
     if (t == 0) {
       // draw horizontal axis and axis label
       toScreen ? (s2 = scoreWarper.time2screen(lastTick)) : scoreWarper.time2svg(lastTick);
-      addLine(g, s, s2, y, y, color, 1);
+      addLine(g, s, s2, y, y, color, 1, 'horizontalAxis');
       addText(g, 'Time (s)', 1, y - 4, 'left', color);
     }
   }
@@ -598,6 +629,23 @@ function toggleRedLines() {
 } // toggleRedLines()
 
 /**
+ * Toggle the visibility of the warping function in the score
+ */
+function toggleWarpFunction() {
+  showWarpFunction = !showWarpFunction;
+  let pageMarginElement = document.querySelector('.page-margin');
+  if (pageMarginElement) {
+    if (showWarpFunction) {
+      drawWarpFunction(pageMarginElement, scoreWarper.computeWarpingArray());
+    } else {
+      clearWarpFunction(pageMarginElement);
+    }
+  } else {
+    console.warn('No page margin element found in the score.');
+  }
+} // toggleWarpFunction()
+
+/**
  * Handle the files of the input #fileInput or #dropArea,
  * check whether there is one MEI file and at least one maps file,
  * load them, warp them, and download the warped SVGs in one
@@ -670,7 +718,7 @@ async function handleLocalFiles(event) {
   });
 } // handleLocalFiles()
 
-function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
+function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1, className = '') {
   const line = document.createElementNS(svgNS, 'line');
   line.setAttribute('x1', x1);
   line.setAttribute('x2', x2);
@@ -679,6 +727,9 @@ function addLine(node, x1, x2, y1, y2, color = 'black', strokeWidth = 1) {
   line.setAttribute('stroke-width', strokeWidth);
   line.setAttribute('stroke-linecap', 'round');
   line.setAttribute('stroke', color);
+  if (className) {
+    line.classList.add(className);
+  }
   return node.appendChild(line);
 } // addLine()
 
