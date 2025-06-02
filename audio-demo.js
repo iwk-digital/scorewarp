@@ -2,6 +2,8 @@ import WaveSurfer from './deps/wavesurfer.js';
 
 const cursorOffset = 0.4; // nudge score slightly to the right to align with wavesurfer cursor
 
+// TODO: Enable SPACE bar to start/stop playback of the current audio
+
 let wavesurfers = {};
 
 function createWaveSurfer(url, pixelsPerSecond) {
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
       for (const item of data) {
         const svgUri = item.svgUri;
         const audioUri = item.audioUri;
+        const givenPixelsPerSecond = item.pixelsPerSecond || 25; // defaults to 25 if not provided
 
         // Create a new div for the wavesurfer container
         const container = document.createElement('div');
@@ -112,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('score-audio-containers').appendChild(container);
         const x1 = score.querySelector('.horizontalAxis').getAttribute('x1');
         const x2 = score.querySelector('.horizontalAxis').getAttribute('x2');
-        const width = parseInt(x2) - parseInt(x1);
+        const horizontalAxisWidth = parseInt(x2) - parseInt(x1);
         // scale the width to fit the audio duration
         // first, obtain last 'text' (axis label) element from the timeAxis
         const texts = score.querySelectorAll('.timeAxis text');
@@ -124,17 +127,34 @@ document.addEventListener('DOMContentLoaded', function () {
         // obtain its value
         const lastSecondsMarkerValue = parseFloat(lastText.textContent);
         // use this to calculate the number of pixels per second in the SVG
-        const pixelsPerSecond = width / lastSecondsMarkerValue;
-        console.log(
-          'SVG width:',
-          width,
-          'lastSecondsMarkerValue:',
-          lastSecondsMarkerValue,
-          'pixelsPerSecond:',
-          pixelsPerSecond
-        );
-        // Create the WaveSurfer instance
-        createWaveSurfer(audioUri, pixelsPerSecond);
+        const pixelsPerSecond = horizontalAxisWidth / lastSecondsMarkerValue;
+
+        let scaleAudio = false;
+        if (scaleAudio) {
+          // calculate the width from the given pixelsPerSecond
+          let calculatedHorizontalAxisWidth = lastSecondsMarkerValue * givenPixelsPerSecond;
+          let scaleFactor = calculatedHorizontalAxisWidth / horizontalAxisWidth;
+          console.log('Calculated horizontal axis width:', calculatedHorizontalAxisWidth, 'Scale factor:', scaleFactor);
+          let svg = score.querySelector('svg');
+          if (svg) {
+            svg.querySelector('.timeAxis').setAttribute('transform-origin', x1 + 'px 0');
+            svg.querySelector('.timeAxis').setAttribute('transform', 'scale(' + scaleFactor + ',1)');
+            svg.querySelector('.definition-scale').setAttribute('transform-origin', x1 + 'px 0');
+            svg.querySelector('.definition-scale').setAttribute('transform', 'scale(' + scaleFactor + ',1)');
+          }
+          createWaveSurfer(audioUri, givenPixelsPerSecond);
+        } else {
+          console.log(
+            'SVG width:',
+            horizontalAxisWidth,
+            'lastSecondsMarkerValue:',
+            lastSecondsMarkerValue,
+            'pixelsPerSecond:',
+            pixelsPerSecond
+          );
+          // Create the WaveSurfer instance
+          createWaveSurfer(audioUri, pixelsPerSecond);
+        }
         audio.style.marginLeft = x1 + 'px';
         container.addEventListener('click', function (event) {
           // scroll vertically to ensure the top and bottom of the container are visible
