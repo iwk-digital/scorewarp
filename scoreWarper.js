@@ -72,7 +72,7 @@ class ScoreWarper {
     let firstXmlIds = maps[this.firstOnsetIdx(maps)].xml_id;
     // determine type of xmlIds (string or array)
     if (typeof firstXmlIds === 'string') {
-      firstXmlIds = [firstXmlIds];
+      firstXmlIds = [firstXmlIds]; // make it an array if not already
     }
     let id1 = firstXmlIds[0];
     if (!id1) {
@@ -518,10 +518,7 @@ class ScoreWarper {
    * @param {number} t time in secods
    */
   time2screen(t) {
-    // return (t - this._tmn) / (this._tmx - this._tmn) * (this._lstX - this._fstX) + this._fstX;
-    let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
-    let xRatio = this._lstX - this._fstX;
-    return timeRatio * xRatio + this._fstX;
+    return this.svg2screen(this.time2svg(t));
   } // time2screen()
 
   /**
@@ -532,9 +529,10 @@ class ScoreWarper {
   time2svg(t) {
     // return (t - this._tmn) / (this._tmx - this._tmn) *
     //     (this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0]) + this._noteSVGXs[0];
-    let timeRatio = (t - this._tmn) / (this._tmx - this._tmn);
+    let timeWidth = this._tmx - this._tmn; // in seconds
+    let normalizedTime = (t - this._tmn) / timeWidth;
     let svgWidth = this._noteSVGXs[this._noteSVGXs.length - 1] - this._noteSVGXs[0];
-    return timeRatio * svgWidth + this._noteSVGXs[0];
+    return normalizedTime * svgWidth + this._noteSVGXs[0];
   } // time2svg()
 
   //#endregion Helper Methods
